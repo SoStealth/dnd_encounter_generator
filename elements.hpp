@@ -1,9 +1,7 @@
 /*
 Author: Lorenzo Damiano, aka Zeren
 Github: https://github.com/SoStealth
-*/
 
-/*
 Elements
 This library contains classes used to represent the elements in the game.
 */
@@ -13,6 +11,7 @@ This library contains classes used to represent the elements in the game.
 
 //STATS constants
 #define N_STATS 9		//Number of stats for a single entity
+#define LEVEL 0			//Level of the character OR challenge rating of the creature
 #define HP 1			//Hit points, the "life" of an entity
 #define AC 2			//Armor class, defence of the enemy
 #define STR 3			//Strength attribute
@@ -30,7 +29,9 @@ This library contains classes used to represent the elements in the game.
 #define MAX_NAME 30		//Maximum length allowed for a name
 #define MAX_ARMOR 2		//Max number of armor an entity can have
 #define MAX_ATTACKS 5		//Max number of attacks an entity can have
+#define MAX_EQUIP 10
 
+//----------------------------------------------------------------------------------------------------------------------------------
 /*
 Armor
 This structure contains the values of the defence equipment on the character.
@@ -41,7 +42,7 @@ typedef struct{
 	int dex_max;	//Max dex modifier value the user can have while wearing the armor
 	int fail_magic;	//Percentage of magic failure while wearing the armor
 }Armor;
-
+//----------------------------------------------------------------------------------------------------------------------------------
 /*
 Attack
 This class defines a type of attack and his values.
@@ -66,24 +67,53 @@ Attack::~Attack() {
 }
 int Attack::hit(int bonus) {
 	int ret;
-	ret = 
+	ret = throw_dice(D20) + bonus;
 	return ret;
 }
-
-
-class Equipment{};
-
+int Attack::hurt(int bonus) {
+	int ret;
+	ret = throw_dice(damage) + bonus;
+	return ret;
+}
+//----------------------------------------------------------------------------------------------------------------------------------
+/*
+Equipment
+This contains equipment attributes.
+Equipment is intended as consumable item.
+For now, only damage or heal items are included.
+*/
+typedef struct{
+char name[MAX_NAME];
+	int value;
+	int uses;
+	bool is_heal;
+}Equipment;
+//----------------------------------------------------------------------------------------------------------------------------------
+/*
+Spell
+This contains all spell related attributes and methods.
+For now only damage spells are included.
+When using a spell, the spell gets sent to the enemy who calculates eventual damage.
+*/
+typedef struct{
+private:char name[MAX_NAME];
+	int level;
+	int uses;
+	int value;
+	int save_type;
+}Spell;
+//----------------------------------------------------------------------------------------------------------------------------------
 class Entity{
 private:char name[MAX_NAME];
 	int stats[N_STATS];
 	int current_hp;
 	Armor armors[MAX_ARMOR];
-	Attack attack[MAX_ATTACKS];
+	Attack attacks[MAX_ATTACKS];
+	Equipment equipments[MAX_EQUIP];
 public:	Entity(char*,bool);	//Receives name identifier for the entity OR filename and a boolean to identify which one
 	~Entity();
-	int get_parameter(int);	//Receives parameter identifier
 	char* get_name();	//Receives name of entity
-	int attack
+	int get_parameter(int);	//Receives parameter identifier
 };
 Entity::Entity(char* filename) {
 	FILE* file = fopen(filename,"r");
