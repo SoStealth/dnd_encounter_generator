@@ -83,7 +83,7 @@ Equipment is intended as consumable item.
 For now, only damage or heal items are included.
 */
 typedef struct{
-char name[MAX_NAME];
+	char name[MAX_NAME];
 	int value;
 	int uses;
 	bool is_heal;
@@ -96,7 +96,7 @@ For now only damage spells are included.
 When using a spell, the spell gets sent to the enemy who calculates eventual damage.
 */
 typedef struct{
-private:char name[MAX_NAME];
+	char name[MAX_NAME];
 	int level;
 	int uses;
 	int value;
