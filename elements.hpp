@@ -29,19 +29,51 @@ This library contains classes used to represent the elements in the game.
 #define MAX_NAME 30		//Maximum length allowed for a name
 #define MAX_ARMOR 2		//Max number of armor an entity can have
 #define MAX_ATTACKS 5		//Max number of attacks an entity can have
-#define MAX_EQUIP 10
+#define MAX_EQUIP 10		//Max number of equipments an entity can carry
+#define MAX_STR 4096		//Max size of a string (used for serializators
 
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
 Armor
-This structure contains the values of the defence equipment on the character.
+This class contains attributes and methods for the defence equipments.
 Atm is not used since the program uses the AC stat but may be implemented in the future for touch attacks or magic fail percentage.
 */
-typedef struct{
+class Armor{
+private:char* name;
 	int ac_bonus;	//Flat bonus value the armor gives to an entity AC
 	int dex_max;	//Max dex modifier value the user can have while wearing the armor
-	int fail_magic;	//Percentage of magic failure while wearing the armor
-}Armor;
+	int magic_fail;	//Percentage of magic failure while wearing the armor
+public:	Armor(char*);	//Receives a serialized armor string
+	~Armor();
+	char* get_name();
+	int get_ac_bonus();
+	int get_dex_max();
+	int get_magic_fail();
+	char* toString();	//Serializator
+};
+Armor::Armor(char* s) {
+	//
+}
+Armor::~Armor() {
+	free(name);
+}
+char* Armor::get_name() {
+	return dupstr(name);	//FREE
+}
+int Armor::get_ac_bonus() {
+	return ac_bonus;
+}
+int Armor::get_dex_max() {
+	return dex_max;
+}
+int Armor::get_magic_fail() {
+	return magic_fail;
+}
+char* Armor::toString() {	
+	char* ret;
+	asprintf(ret,"%s,%d,%d,%d",name,ac_bonus,dex_max,magic_fail);
+	return ret;		//FREE
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
 Attack
@@ -49,18 +81,17 @@ This class defines a type of attack and his values.
 Contains method to get attack results.
 */
 class Attack{
-private:char name[MAX_NAME];		//Name of the attack
+private:char* name;		//Name of the attack
 	int damage;			//Damage of the attack
 	int crit;			//Crit multiplier
-public: Attack(char*,int,int);		//Constructor: name, damage, crit
+public: Attack(char*);			//Receives serialized attack string
 	~Attack();			//Destructor
 	int hit(int);			//Generate an attack with the weapon: bonus
 	int hurt(int);			//Generate damage value of the weapon: bonus
+	char* toString();
 };
-Attack::Attack(char* name, int damage, int crit) {
-	this->name = name;
-	this->damage = damage;
-	this->crit = crit;
+Attack::Attack(char* s) {
+	//
 }
 Attack::~Attack() {
 	free(name);
@@ -75,19 +106,62 @@ int Attack::hurt(int bonus) {
 	ret = throw_dice(damage) + bonus;
 	return ret;
 }
+char* Attack::toString() {
+	char* ret;
+	asprintf(ret,"%s,%d,%d",name,damage,crit);
+	return ret;		//FREE
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
 Equipment
-This contains equipment attributes.
+This contains equipment attributes and methods.
 Equipment is intended as consumable item.
 For now, only damage or heal items are included.
 */
-typedef struct{
-	char name[MAX_NAME];
-	int value;
-	int uses;
-	bool is_heal;
-}Equipment;
+class Equipment{
+private:char* name;	//Name of the item
+	int value;	//Numeric value of the item
+	int uses;	//Number of uses for the item
+	bool heal;	//If true, the item is a healing item; if false, is a damage item
+public:	Equipment();
+	~Equipment();
+	char* get_name();
+	int get_value();
+	int get_uses();
+	bool is_heal();
+	bool use();		//Checks if the item still has uses; is yes, decreases uses by 1 and returns true; else, returns false
+	char* toString();
+};
+Equipment::Equipment(char* s) {
+	//
+}
+Equipment::~Equipment() {
+	free(name);
+}
+char* Equipment::get_name() {
+	return dupstr(name);	//FREE
+}
+int Equipment::get_value() {
+	return value;
+}
+int Equipment::get_uses() {
+	return uses;
+}
+bool Equipment::is_heal() {
+	return heal;
+}
+bool Equipment::use() {
+	if(uses>0) {
+		uses--;
+		return true;
+	}
+	return false;
+}
+char* Equipment::toString() {
+	char* ret;
+	asprintf(ret,"%s,%d,%d",name,value,heal);
+	return ret;		//FREE
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
 Spell
