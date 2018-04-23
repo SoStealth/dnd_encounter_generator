@@ -165,18 +165,62 @@ char* Equipment::toString() {
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
 Spell
-This contains all spell related attributes and methods.
+This class contains all spell related attributes and methods.
 For now only damage spells are included.
 When using a spell, the spell gets sent to the enemy who calculates eventual damage.
 */
-typedef struct{
-	char name[MAX_NAME];
+class Spell{
+private:char* name;
 	int level;
 	int uses;
 	int value;
 	int save_type;
-}Spell;
+public:	Spell(char*);	//Receives a serialized spell string
+	~Spell();
+	char* get_name();
+	int get_level();
+	int get_uses();
+	int get_value();
+	int get_save_type();
+	int get_dc(int);	//Receives spellcaster level
+	char* toString();
+};
+Spell::Spell(char* s) {
+	//
+}
+Spell::~Spell() {
+	free(name);
+}
+char* Spell::get_name() {
+	return dupstr(name);	//FREE
+}
+int Spell::get_level() {
+	return level;
+}
+int Spell::get_uses() {
+	return uses;
+}
+int Spell::get_value() {
+	return value;
+}
+int Spell::get_save_type() {
+	return save_type;
+}
+int Spell::get_dc(int caster_level) {
+	int ret;
+	ret = 10 + caster_level + level;
+	return ret;
+}
+char* Spell::toString() {
+	char* ret;
+	asprintf(ret,"%s,%d,%d,%d,%d",name,level,uses,value,save_type);
+	return ret;		//FREE
+}
 //----------------------------------------------------------------------------------------------------------------------------------
+/*
+Entity
+This class contains basic attributes and methods for every entity in the game.
+*/
 class Entity{
 private:char name[MAX_NAME];
 	int stats[N_STATS];
@@ -189,17 +233,6 @@ public:	Entity(char*,bool);	//Receives name identifier for the entity OR filenam
 	char* get_name();	//Receives name of entity
 	int get_parameter(int);	//Receives parameter identifier
 };
-Entity::Entity(char* filename) {
-	FILE* file = fopen(filename,"r");
-	//structure: "name,HP,AC,STR,DEX,CON,INT,WIS,CHAR"
-	char c = fgetc(file);
-	int i = 0;
-	while(c!=EOF && c!=',') {
-		name[i]=c;
-		i++;
-	}
-	c = fgetc(file);
-	for(i=0;i<N_STATS;i++) {
-		
-	}
+Entity::Entity(char* ) {
+	
 }
