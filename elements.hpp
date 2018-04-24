@@ -10,7 +10,7 @@ This library contains classes used to represent the elements in the game.
 #include "rules.hpp"		//Contains functions for applying rules
 
 //STATS constants
-#define N_STATS 9		//Number of stats for a single entity
+#define N_STATS 13		//Number of stats for a single entity
 #define LEVEL 0			//Level of the character OR challenge rating of the creature
 #define HP 1			//Hit points, the "life" of an entity
 #define AC 2			//Armor class, defence of the enemy
@@ -29,7 +29,7 @@ This library contains classes used to represent the elements in the game.
 #define MAX_NAME 30		//Maximum length allowed for a name
 #define MAX_ARMOR 2		//Max number of armor an entity can have
 #define MAX_ATTACKS 5		//Max number of attacks an entity can have
-#define MAX_EQUIP 10		//Max number of equipments an entity can carry
+#define MAX_ITEMS 10		//Max number of equipments an entity can carry
 #define MAX_STR 4096		//Max size of a string (used for serializators
 
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -113,18 +113,18 @@ char* Attack::toString() {
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
-Equipment
-This contains equipment attributes and methods.
-Equipment is intended as consumable item.
+Item
+This contains item attributes and methods.
+Item is intended as consumable items.
 For now, only damage or heal items are included.
 */
-class Equipment{
+class Item{
 private:char* name;	//Name of the item
 	int value;	//Numeric value of the item
 	int uses;	//Number of uses for the item
 	bool heal;	//If true, the item is a healing item; if false, is a damage item
-public:	Equipment();
-	~Equipment();
+public:	Item();
+	~Item();
 	char* get_name();
 	int get_value();
 	int get_uses();
@@ -132,32 +132,32 @@ public:	Equipment();
 	bool use();		//Checks if the item still has uses; is yes, decreases uses by 1 and returns true; else, returns false
 	char* toString();
 };
-Equipment::Equipment(char* s) {
+Item::Item(char* s) {
 	//
 }
-Equipment::~Equipment() {
+Item::~Item() {
 	free(name);
 }
-char* Equipment::get_name() {
+char* Item::get_name() {
 	return dupstr(name);	//FREE
 }
-int Equipment::get_value() {
+int Item::get_value() {
 	return value;
 }
-int Equipment::get_uses() {
+int Item::get_uses() {
 	return uses;
 }
-bool Equipment::is_heal() {
+bool Item::is_heal() {
 	return heal;
 }
-bool Equipment::use() {
+bool Item::use() {
 	if(uses>0) {
 		uses--;
 		return true;
 	}
 	return false;
 }
-char* Equipment::toString() {
+char* Item::toString() {
 	char* ret;
 	asprintf(ret,"%s,%d,%d",name,value,heal);
 	return ret;		//FREE
@@ -227,12 +227,156 @@ private:char name[MAX_NAME];
 	int current_hp;
 	Armor armors[MAX_ARMOR];
 	Attack attacks[MAX_ATTACKS];
-	Equipment equipments[MAX_EQUIP];
-public:	Entity(char*,bool);	//Receives name identifier for the entity OR filename and a boolean to identify which one
+	Item items[MAX_ITEMS];
+public:	Entity(char*,bool);	//Receives serialized entity string
 	~Entity();
 	char* get_name();	//Receives name of entity
-	int get_parameter(int);	//Receives parameter identifier
+	int get_stat(int);	//Receives parameter identifier
+	int get_current_hp();
+	bool is_alive();	//If current_hp > 0 true, else false
+	bool equip_armor(Armor);	//True if armor gets equipped, false if there is no armor space
+	Armor get_armor(int);	//Receives armor identifier
+	bool unequip_armor(int);	//Receives armor identifier, true if armor has been unequipped, false if there is no armor
+	bool equip_attack(Attack);	//True if attack gets equipped, false if there is no attack space
+	Attack get_attack(int);		//Receives attack identifier
+	bool unequip_attack(int);	//Receives attack identifier, true if attack has been unequipped, false if there is no attack
+	bool equip_item(Item);	//True if item gets equipped, false if there is no item space
+	Item get_item(int);	//Receives item identifier
+	bool unequip_item(int);	//Receives item identifier, true if item has been unequipped, false if there is no item
+	char* toString();	//serializator
 };
 Entity::Entity(char* ) {
+	//
+	current_hp = stats[HP];
+}
+Entity::~Entity() {			//Deletes all external objects and frees name
+	int i;
+	for(i=0;i<MAX_ARMOR;i++) {	//Deletes all armor objects
+		delete(armors[i]);
+	}
+	for(i=0;i<MAX_ATTACKS;i++) {	//Deletes all attack objects
+		delete(attacks[i]);
+	}
+	for(i=0;i<MAX_ITEMS;i++) {	//Deletes all item objects
+		delete(items[i]);
+	}
+	free(name);
+}
+char* Entity::get_name() {
+	return dupstr(name);	//FREE
+}
+int Entity::get_stat(int id) {
+	if(id<N_STATS) {		//Checks if id is within range
+		return stats[id];
+	} else {
+		return null;
+	}
+}
+int Entity::get_current_hp() {
+	return current_hp;
+}
+bool Entity::is_alive() {
+	return (current_hp>0);
+}
+bool Entity::equip_armor(char* s) {	//Receives serialized armor string
+	bool ret=false;
+	int i;
+	for(i=0;i<MAX_ARMOR;i++) {
+		if(armors[i]==NULL) {
+			Armor armor(s);
+			armors[i] = armor;
+			ret=true;
+		}
+	}
+	return ret;
+}
+Armor Entity::get_armor(int id) {
+	if(id<MAX_ARMOR) {		//Checks if id is within range
+		return armors[id];
+	} else {
+		return NULL;
+	}
+}
+bool Entity::unequip_armor(int id) {
+	if(id<MAX_ARMOR) {		//Checks if id is within range
+		if(armors[id]!=NULL) {
+			delete(armors[id]);
+			armors[id]=NULL;	//NULL is used in 'Entity::equip_armor' to check if the slot is free
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+bool Entity::equip_attack(char* s) {	//Receives serialized attack string
+	bool ret=false;
+	int i;
+	for(i=0;i<MAX_ATTACKS;i++) {
+		if(attacks[i]==NULL) {
+			Attack attack(s);
+			attacks[i] = attack;
+			ret=true;
+		}
+	}
+	return ret;
+}
+Attack Entity::get_attack(int id) {
+	if(id<MAX_ATTACKS) {		//Checks if id is within range
+		return attacks[id];
+	} else {
+		return NULL;
+	}
+}
+bool Entity::unequip_attack(int id) {
+	if(id<MAX_ATTACKS) {		//Checks if id is within range
+		if(attacks[id]!=NULL) {
+			delete(attacks[id]);
+			attacks[id]=NULL;	//NULL is used in 'Entity::equip_attack' to check if the slot is free
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+bool Entity::equip_item(char* s) {	//Receives serialized item string
+	bool ret=false;
+	int i;
+	for(i=0;i<MAX_ITEMS;i++) {
+		if(items[i]==NULL) {
+			Item item(s);
+			items[i] = item;
+			ret=true;
+		}
+	}
+	return ret;
+}
+Item Entity::get_item(int id) {
+	if(id<MAX_ITEMS) {		//Checks if id is within range
+		return items[id];
+	} else {
+		return NULL;
+	}
+}
+bool Entity::unequip_item(int id) {
+	if(id<MAX_ITEMS) {		//Checks if id is within range
+		if(items[id]!=NULL) {
+			delete(items[id]);
+			items[id]=NULL;		//NULL is used in 'Entity::equip_item' to check if the slot is free
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+/* 
+The toString() function doesn't take count of attacks, items and armors
+Those elements are going to be assigned randomly and balanced to create a balanced entity
+This way in the actual game people who have gained stronger equipment will find the fight easier, while
+	people with worse equipment will find it harder
+	
+"It's not a bug, it's a feature!"
+-cit. YTMND
+*/
+char* Entity::toString() {
 	
 }
