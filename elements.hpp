@@ -32,6 +32,15 @@ This library contains classes used to represent the elements in the game.
 #define MAX_ITEMS 10		//Max number of equipments an entity can carry
 #define MAX_STR 4096		//Max size of a string (used for serializators
 
+//Spells constants
+#define SPELL_LEVELS 10		//Used to create the spell usage record for casters
+#define ARCANE 0		//Used to identify arcane spells
+#define CLERIC 1		//Used to identify cleric spells
+#define BARD 2			//Used to identify bard spells
+#define RANGER 3		//Used to identify ranger spells
+#define PALADIN 4		//Used to identify paladin spells
+#define DRUID 5			//Used to identify druid spells
+
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
 Armor
@@ -172,14 +181,14 @@ When using a spell, the spell gets sent to the enemy who calculates eventual dam
 class Spell{
 private:char* name;
 	int level;
-	int uses;
+	int type;
 	int value;
 	int save_type;
 public:	Spell(char*);	//Receives a serialized spell string
 	~Spell();
 	char* get_name();
 	int get_level();
-	int get_uses();
+	int get_type();
 	int get_value();
 	int get_save_type();
 	int get_dc(int);	//Receives spellcaster level
@@ -197,6 +206,9 @@ char* Spell::get_name() {
 int Spell::get_level() {
 	return level;
 }
+int Spell::get_type() {
+	return type;
+}
 int Spell::get_uses() {
 	return uses;
 }
@@ -213,7 +225,7 @@ int Spell::get_dc(int caster_level) {
 }
 char* Spell::toString() {
 	char* ret;
-	asprintf(ret,"%s,%d,%d,%d,%d",name,level,uses,value,save_type);
+	asprintf(ret,"%s,%d,%d,%d,%d",name,level,type,value,save_type);
 	return ret;		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -222,7 +234,7 @@ Entity
 This class contains basic attributes and methods for every entity in the game.
 */
 class Entity{
-private:char name[MAX_NAME];
+protected:char name[MAX_NAME];
 	int stats[N_STATS];
 	int current_hp;
 	Armor armors[MAX_ARMOR];
@@ -384,50 +396,92 @@ char* Entity::toString() {
 	return ret;		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
+class Caster : public Entity{
+protected:Spell* spells;
+	int spell_type;
+	int spell_uses[SPELL_LEVEL];
+public:	Caster(char*);		//Receives serialized caster string
+	~Caster();
+	int cast();		//Uses a random spell
+	char* toString();	//Serializator
+};
+//----------------------------------------------------------------------------------------------------------------------------------
 class Barbarian : public Entity{
-
+public:	Barbarian(char*);	//Receives serialized barbarian string
+	~Barbarian();
+	char* toString();	//Serializator
 };
 //----------------------------------------------------------------------------------------------------------------------------------
-class Bard : public Entity{
-
+class Bard : public Caster{
+public:	Bard(char*);		//Receives serialized bard string
+	~Bard();
+	char* toString();	//Serializator
 };
 //----------------------------------------------------------------------------------------------------------------------------------
-class Cleric : public Entity{
-
+class Cleric : public Caster{
+public:	Cleric(char*);
+	~Cleric();
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
-class Druid : public Entity{
-
+class Druid : public Caster{
+private:int wild_shape_time;		//Number of turns that Wild Shape lasts
+public:	Druid(char*);
+	~Druid();
+	int wild_shape(Animal);		//Turn the druid into an animal for random turns
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
-class Sorcerer : public Entity{
-
+class Sorcerer : public Caster{
+public:	Sorcerer(char*);
+	~Sorcerer();
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
-class Wizard : public Entity{
-
+class Wizard : public Caster{
+public:	Wizard(char*);
+	~Wizard();
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Monk : public Entity{
-
+public:	Monk(char*);
+	~Monk();
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Fighter : public Entity{
-
+public:	Fighter(char*);
+	~Fighter();
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
-class Ranger : public Entity{
-
+class Ranger : public Caster{
+public:	Ranger(char*);
+	~Ranger();
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Rogue : public Entity{
-
+public:	Rogue(char*);
+	~Rogue();
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
-class Paladin : public Entity{
-
+class Paladin : public Caster{
+public:	Paladin(char*);
+	~Paladin();
+	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Monster : public Entity{
-
+public:	Monster(char*);
+	~Monster();
+	char* toString();
+};
+//----------------------------------------------------------------------------------------------------------------------------------
+class Animal : public Entity{
+public:	Animal(char*);
+	~Animal();
+	char* toString();
 };
