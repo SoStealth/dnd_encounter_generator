@@ -40,12 +40,12 @@ This library contains classes used to represent the elements in the game.
 
 //Spells constants
 #define SPELL_LEVELS 10		//Used to create the spell usage record for casters
-#define ARCANE 0		//Used to identify arcane spells
-#define CLERIC 1		//Used to identify cleric spells
-#define BARD 2			//Used to identify bard spells
-#define RANGER 3		//Used to identify ranger spells
-#define PALADIN 4		//Used to identify paladin spells
-#define DRUID 5			//Used to identify druid spells
+#define S_ARCANE 0		//Used to identify arcane spells
+#define S_CLERIC 1		//Used to identify cleric spells
+#define S_BARD 2			//Used to identify bard spells
+#define S_RANGER 3		//Used to identify ranger spells
+#define S_PALADIN 4		//Used to identify paladin spells
+#define S_DRUID 5			//Used to identify druid spells
 
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
@@ -518,11 +518,88 @@ char* Caster::toString() {
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Barbarian : public Entity{
+private:int rage_time;		//Number of turns the barbarian rage lasts
 public:	Barbarian(char*);	//Receives serialized barbarian string
 	~Barbarian();
+	bool rage();		//Sends the barbarian in rage
+	bool end_rage();
 	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();	//Serializator
 };
+Barbarian::Barbarian(char* s) {
+	char* temp;
+	Entity::Entity(s);
+	rage_time = 3 + get_modifier(stats[COS]);
+}
+Barbarian::~Barbarian() {
+	Entity::~Entity();
+}
+/* Send the barbarian into rage status. If this is called, the method "end_rage" will be called every end turn 
+to check wether the barbarian is still in rage or not */
+bool Barbarian::rage() {
+	if(rage_time==0) {
+		return false;
+	}
+	if(level<11) {
+		current_hp = current_hp + (2*level);
+		stats[STR] += 4;
+		stats[COS] += 4;
+		stats[WILL] += 2;
+		stats[AC] -= 2;
+		return true;
+	}
+	if(level<20) {
+		current_hp = current_hp + (2*level);
+		stats[STR] += 6;
+		stats[COS] += 6;
+		stats[WILL] += 3;
+		stats[AC] -= 2;
+		return true;
+	}
+	current_hp = current_hp + (2*level);
+	stats[STR] += 8;
+	stats[COS] += 8;
+	stats[WILL] += 4;
+	stats[AC] -= 2;
+	return true;
+}
+/* If the barbarian can still be in rage, decreases rage_time and return false. Else, reset stats and returns true */
+bool end_rage() {
+	if(rage_time>0) {
+		rage_time--;
+		return false;
+	}
+	if(level<11) {
+		current_hp = current_hp - (2*level);
+		stats[STR] -= 4;
+		stats[COS] -= 4;
+		stats[WILL] -= 2;
+		stats[AC] += 2;
+		return true;
+	}
+	if(level<20) {
+		current_hp = current_hp - (2*level);
+		stats[STR] -= 6;
+		stats[COS] -= 6;
+		stats[WILL] -= 3;
+		stats[AC] += 2;
+		return true;
+	}
+	current_hp = current_hp - (2*level);
+	stats[STR] -= 8;
+	stats[COS] -= 8;
+	stats[WILL] -= 4;
+	stats[AC] += 2;
+	return true;
+}
+bool Barbarian::act() {
+	
+}
+char* Barbarian::toString() {
+	char* ret;
+	ret = Entity::toString();
+	return ret;		//FREE
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 class Bard : public Caster{
 public:	Bard(char*);		//Receives serialized bard string
@@ -530,6 +607,13 @@ public:	Bard(char*);		//Receives serialized bard string
 	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();	//Serializator
 };
+Bard::Bard(char* very_bardic_string) {
+	Caster::Caster(very_bardic_string);
+	spell_type = S_BARD;
+	for(int i=0;i<SPELL_LEVELS;i++) {
+		spell_uses[i] = ;
+	}
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
 public:	Cleric(char*);
