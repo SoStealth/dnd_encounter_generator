@@ -1,7 +1,9 @@
 /*
 Author: Lorenzo Damiano, aka Zeren
 Github: https://github.com/SoStealth
-
+*/
+//----------------------------------------------------------------------------------------------------------------------------------
+/*
 Elements
 This library contains classes used to represent the elements in the game.
 */
@@ -9,9 +11,12 @@ This library contains classes used to represent the elements in the game.
 //include
 #include "rules.hpp"		//Contains functions for applying rules
 #include "functions.h"		//Contains useful functions
+//#include <stdio.h> is already in "functions.h"
+//#include <string.h> is already in "functions.h"
 
 //STATS constants
 #define N_STATS 13		//Number of stats for a single entity
+#define N_BSTATS 9		//Number of stats that cannot be calculated (will be needed in the constructor)
 #define LEVEL 0			//Level of the character OR challenge rating of the creature
 #define HP 1			//Hit points, the "life" of an entity
 #define AC 2			//Armor class, defence of the enemy
@@ -62,7 +67,15 @@ public:	Armor(char*);	//Receives a serialized armor string
 	char* toString();	//Serializator
 };
 Armor::Armor(char* s) {
-	//
+	char* temp;
+	temp = strtok(s,",");
+	name = temp;
+	temp = strtok(NULL,",");
+	ac_bonus = atoi(temp);
+	temp = strtok(NULL,",");
+	dex_max = atoi(temp);
+	temp = strtok(NULL,",");
+	magic_fail = atoi(temp);
 }
 Armor::~Armor() {
 	free(name);
@@ -101,7 +114,13 @@ public: Attack(char*);			//Receives serialized attack string
 	char* toString();
 };
 Attack::Attack(char* s) {
-	//
+	char* temp;
+	temp = strtok(s,",");
+	name = temp;
+	temp = strtok(NULL,",");
+	damage = atoi(temp);
+	temp = strtok(NULL,",");
+	crit = atoi(temp);
 }
 Attack::~Attack() {
 	free(name);
@@ -143,7 +162,15 @@ public:	Item();
 	char* toString();
 };
 Item::Item(char* s) {
-	//
+	char* temp;
+	temp = strtok(s,",");
+	name = temp;
+	temp = strtok(NULL,",");
+	value = atoi(temp);
+	temp = strtok(NULL,",");
+	uses = atoi(temp);
+	temp = strtok(NULL,",");
+	heal = (bool)(temp[0] - '0');		//Apparently subbing '0' to a character makes it an integer
 }
 Item::~Item() {
 	free(name);
@@ -196,7 +223,17 @@ public:	Spell(char*);	//Receives a serialized spell string
 	char* toString();
 };
 Spell::Spell(char* s) {
-	//
+	char* temp;
+	temp = strtok(s,",");
+	name = temp;
+	temp = strtok(NULL,",");
+	level = atoi(temp);
+	temp = strtok(NULL,",");
+	type = atoi(temp);
+	temp = strtok(NULL,",");
+	value = atoi(temp);
+	temp = strtok(NULL,",");
+	save_type = atoi(temp);
 }
 Spell::~Spell() {
 	free(name);
@@ -247,20 +284,35 @@ public:	Entity(char*,bool);	//Receives serialized entity string
 	int get_stat(int);	//Receives parameter identifier
 	int get_current_hp();
 	bool is_alive();	//If current_hp > 0 true, else false
-	bool equip_armor(Armor);	//True if armor gets equipped, false if there is no armor space
+	bool equip_armor(char*);	//True if armor gets equipped, false if there is no armor space
 	Armor get_armor(int);	//Receives armor identifier
 	bool unequip_armor(int);	//Receives armor identifier, true if armor has been unequipped, false if there is no armor
-	bool equip_attack(Attack);	//True if attack gets equipped, false if there is no attack space
+	bool equip_attack(char*);	//True if attack gets equipped, false if there is no attack space
 	Attack get_attack(int);		//Receives attack identifier
 	bool unequip_attack(int);	//Receives attack identifier, true if attack has been unequipped, false if there is no attack
-	bool equip_item(Item);	//True if item gets equipped, false if there is no item space
+	bool equip_item(char*);	//True if item gets equipped, false if there is no item space
 	Item get_item(int);	//Receives item identifier
 	bool unequip_item(int);	//Receives item identifier, true if item has been unequipped, false if there is no item
 	char* toString();	//serializator
 };
-Entity::Entity(char* ) {
-	//
+Entity::Entity(char* s) {
+	char* temp;
+	temp = strtok(s,",");
+	name = temp;
+	for(int i=0;i<N_BSTATS;i++) {		//Only base stats are assigned, the rest can be calculated
+		temp = strtok(NULL,",");
+		stats[i] = atoi(temp);
+	}
 	current_hp = stats[HP];
+	for(i=0;i<MAX_ARMOR;i++) {	//Sets all armor objects to NULL
+		armors[i]=NULL;
+	}
+	for(i=0;i<MAX_ATTACKS;i++) {	//Sets all attack objects to NULL
+		attacks[i]=NULL;
+	}
+	for(i=0;i<MAX_ITEMS;i++) {	//Sets all item objects to NULL
+		items[i]=NULL;
+	}
 }
 Entity::~Entity() {			//Deletes all external objects and frees name
 	int i;
@@ -391,37 +443,98 @@ This way in the actual game people who have gained stronger equipment will find 
 char* Entity::toString() {
 	char* ret;
 	asprintf(ret,"%s",name);
-	for(int i=0;i<N_STATS;i++) {
+	for(int i=0;i<N_BSTATS;i++) {		//Only base stats are serialized, because the rest can be calculated
 		asprintf(ret,"%s,%d",ret,stats[i]);
 	}
 	return ret;		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
+/*
+Caster
+This class, derived from Entity, represents entities who can use spells.
+Contains known spells data and the method "cast" to be able to use them.
+*/
 class Caster : public Entity{
 protected:Spell* spells;
 	int spell_type;
+	int n_spells;		//Number of spells known to the caster
 	int spell_uses[SPELL_LEVEL];
 public:	Caster(char*);		//Receives serialized caster string
 	~Caster();
-	int cast();		//Uses a random spell
+	bool equip_spell(char*);	//True if spell gets equipped, false if there is no spell space
+	Spell get_spell(int);	//Receives spell identifier
+	bool unequip_spell(int);	//Receives spell identifier, true if spell has been unequipped, false if there is no spell
+	bool cast();		//Uses a random spell
 	char* toString();	//Serializator
 };
+Caster::Caster(char* s) {
+	Entity::Entity(s);
+}
+Caster::~Caster() {
+	for(int i=0;i<n_spells;i++) {
+		delete(spells[i]);
+	}
+}
+bool Caster::equip_spell(char* s) {	//Receives serialized spell string
+	bool ret=false;
+	int i;
+	for(i=0;i<n_spells;i++) {
+		if(spells[i]==NULL) {
+			Spell spell(s);
+			spells[i] = spell;
+			ret=true;
+		}
+	}
+	return ret;
+}
+Spell Caster::get_spell(int id) {
+	if(id<n_spells) {		//Checks if id is within range
+		return spells[id];
+	} else {
+		return NULL;
+	}
+}
+bool Caster::unequip_spell(int id) {
+	if(id<n_spells) {		//Checks if id is within range
+		if(spells[id]!=NULL) {
+			delete(spells[id]);
+			spells[id]=NULL;		//NULL is used in 'Caster::equip_spell' to check if the slot is free
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+bool Caster::cast() {
+	//Selects a random spell and sends it to the target
+	//Target gets selected randomly
+	//If there are no available spells, return is set to false
+}
+char* Caster::toString() {
+	//this is almost useless because all Caster parameters are calculated, set or generated randomly
+	char* ret;
+	ret = Entity::toString();
+	return ret;
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 class Barbarian : public Entity{
 public:	Barbarian(char*);	//Receives serialized barbarian string
 	~Barbarian();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();	//Serializator
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Bard : public Caster{
 public:	Bard(char*);		//Receives serialized bard string
 	~Bard();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();	//Serializator
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
 public:	Cleric(char*);
 	~Cleric();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -429,6 +542,7 @@ class Druid : public Caster{
 private:int wild_shape_time;		//Number of turns that Wild Shape lasts
 public:	Druid(char*);
 	~Druid();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	int wild_shape(Animal);		//Turn the druid into an animal for random turns
 	char* toString();
 };
@@ -436,53 +550,62 @@ public:	Druid(char*);
 class Sorcerer : public Caster{
 public:	Sorcerer(char*);
 	~Sorcerer();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Wizard : public Caster{
 public:	Wizard(char*);
 	~Wizard();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Monk : public Entity{
 public:	Monk(char*);
 	~Monk();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Fighter : public Entity{
 public:	Fighter(char*);
 	~Fighter();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Ranger : public Caster{
 public:	Ranger(char*);
 	~Ranger();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Rogue : public Entity{
 public:	Rogue(char*);
 	~Rogue();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Paladin : public Caster{
 public:	Paladin(char*);
 	~Paladin();
+	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Monster : public Entity{
 public:	Monster(char*);
 	~Monster();
+	bool act();		//The monster plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
 class Animal : public Entity{
 public:	Animal(char*);
 	~Animal();
+	bool act();		//The animal plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
