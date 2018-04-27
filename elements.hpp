@@ -540,10 +540,11 @@ public:	Cleric(char*);
 //----------------------------------------------------------------------------------------------------------------------------------
 class Druid : public Caster{
 private:int wild_shape_time;		//Number of turns that Wild Shape lasts
+	Animal shape;		//When "wild_shape" is used, this is set to the Animal in which the druid transforms
 public:	Druid(char*);
 	~Druid();
 	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
-	int wild_shape(Animal);		//Turn the druid into an animal for random turns
+	int wild_shape();		//Turn the druid into an animal for random turns
 	char* toString();
 };
 //----------------------------------------------------------------------------------------------------------------------------------
