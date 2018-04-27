@@ -8,6 +8,7 @@ This library contains classes used to represent the elements in the game.
 
 //include
 #include "rules.hpp"		//Contains functions for applying rules
+#include "functions.h"		//Contains useful functions
 
 //STATS constants
 #define N_STATS 13		//Number of stats for a single entity
