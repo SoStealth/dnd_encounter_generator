@@ -21,3 +21,7 @@ Library will be updated every time a new function for applying a rule will be ne
 
 int throw_dice(int);		//Receives number of dice faces
 int get_modifier(int);		//Receives a stat and return modifier
+
+int throw_dice(int faces) {
+	
+}
