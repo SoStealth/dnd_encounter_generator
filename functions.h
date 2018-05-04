@@ -11,6 +11,9 @@ This library contains functions that will be of use in the code.
 #include <stdio.h>
 #include <string.h>
 
+/*
+Loads a table from a csv file
+*/
 void get_table(FILE* file, int rows, int columns, int table[rows][columns]) {
 	char* line;
 	size_t len = 0;
