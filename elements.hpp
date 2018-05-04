@@ -33,19 +33,24 @@ This library contains classes used to represent the elements in the game.
 
 //MAX constants
 #define MAX_NAME 30		//Maximum length allowed for a name
+#define MAX_LEVEL 20		//Maximum level allowed
 #define MAX_ARMOR 2		//Max number of armor an entity can have
 #define MAX_ATTACKS 5		//Max number of attacks an entity can have
 #define MAX_ITEMS 10		//Max number of equipments an entity can carry
 #define MAX_STR 4096		//Max size of a string (used for serializators
+#define BARD_SPELL_MAX_LEVEL 6		//Max level of a bard spell
+#define ARCANE_SPELL_MAX_LEVEL 10	//Max level of an arcane spell
 
 //Spells constants
-#define SPELL_LEVELS 10		//Used to create the spell usage record for casters
 #define S_ARCANE 0		//Used to identify arcane spells
 #define S_CLERIC 1		//Used to identify cleric spells
 #define S_BARD 2			//Used to identify bard spells
 #define S_RANGER 3		//Used to identify ranger spells
 #define S_PALADIN 4		//Used to identify paladin spells
 #define S_DRUID 5			//Used to identify druid spells
+
+//Tabs constants
+#define BARD_SPELLSLOTS	"bard_spellslots.txt"		//Tab for bard spellslot
 
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
@@ -313,6 +318,9 @@ Entity::Entity(char* s) {
 	for(i=0;i<MAX_ITEMS;i++) {	//Sets all item objects to NULL
 		items[i]=NULL;
 	}
+	if(stats[LEVEL]>MAX_LEVEL) {
+		stats[LEVEL] = MAX_LEVEL;
+	}
 }
 Entity::~Entity() {			//Deletes all external objects and frees name
 	int i;
@@ -457,8 +465,6 @@ Contains known spells data and the method "cast" to be able to use them.
 class Caster : public Entity{
 protected:Spell* spells;
 	int spell_type;
-	int n_spells;		//Number of spells known to the caster
-	int spell_uses[SPELL_LEVEL];
 public:	Caster(char*);		//Receives serialized caster string
 	~Caster();
 	bool equip_spell(char*);	//True if spell gets equipped, false if there is no spell space
@@ -474,6 +480,7 @@ Caster::~Caster() {
 	for(int i=0;i<n_spells;i++) {
 		delete(spells[i]);
 	}
+	Entity::~Entity();
 }
 bool Caster::equip_spell(char* s) {	//Receives serialized spell string
 	bool ret=false;
@@ -602,6 +609,7 @@ char* Barbarian::toString() {
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Bard : public Caster{
+private:int spell_uses[BARD_SPELL_MAX_LEVEL];
 public:	Bard(char*);		//Receives serialized bard string
 	~Bard();
 	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
@@ -610,9 +618,16 @@ public:	Bard(char*);		//Receives serialized bard string
 Bard::Bard(char* very_bardic_string) {
 	Caster::Caster(very_bardic_string);
 	spell_type = S_BARD;
-	for(int i=0;i<SPELL_LEVELS;i++) {
-		spell_uses[i] = ;
+	int table[MAX_LEVEL][BARD_SPELL_MAX_LEVEL];
+	FILE* file = fopen(BARD_SPELLSLOTS,"r");
+	get_table(file,MAX_LEVEL,BARD_SPELL_MAX_LEVEL,table);
+	fclose(file);
+	for(int i=0;i<BARD_SPELL_MAX_LEVEL;i++) {
+		spell_uses[BARD_SPELL_MAX_LEVEL] = table[stats[LEVEL]][i];
 	}
+}
+Bard::~Bard() {
+	Caster::~Caster();
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
