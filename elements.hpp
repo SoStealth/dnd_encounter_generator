@@ -612,7 +612,7 @@ class Bard : public Caster{
 private:int spell_uses[BARD_SPELL_MAX_LEVEL];
 public:	Bard(char*);		//Receives serialized bard string
 	~Bard();
-	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
+	int act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();	//Serializator
 };
 Bard::Bard(char* very_bardic_string) {
@@ -628,6 +628,9 @@ Bard::Bard(char* very_bardic_string) {
 }
 Bard::~Bard() {
 	Caster::~Caster();
+}
+int Bard::act() {
+	
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
