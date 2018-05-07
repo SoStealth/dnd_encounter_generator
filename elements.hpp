@@ -298,6 +298,8 @@ public:	Entity(char*,bool);	//Receives serialized entity string
 	bool equip_item(char*);	//True if item gets equipped, false if there is no item space
 	Item get_item(int);	//Receives item identifier
 	bool unequip_item(int);	//Receives item identifier, true if item has been unequipped, false if there is no item
+	bool hit(int);		//Hits the entity and lowers his hp, return false if damage has been neglected
+	bool heal(int);		//Heals the entity by an amount, return false if heal has been neglected
 	char* toString();	//serializator
 };
 Entity::Entity(char* s) {
@@ -411,6 +413,11 @@ bool Entity::unequip_attack(int id) {
 		}
 	}
 }
+/*
+equip_item method
+Receives a serialized item string and creates an item in the first free item slot
+Return false if all item slots are full
+*/
 bool Entity::equip_item(char* s) {	//Receives serialized item string
 	bool ret=false;
 	int i;
@@ -423,6 +430,11 @@ bool Entity::equip_item(char* s) {	//Receives serialized item string
 	}
 	return ret;
 }
+/*
+get_item method
+Returns the item corresponding to the 'id' parameter
+In case the item is not found or the id is out of range, returns NULL
+*/
 Item Entity::get_item(int id) {
 	if(id<MAX_ITEMS) {		//Checks if id is within range
 		return items[id];
@@ -430,16 +442,42 @@ Item Entity::get_item(int id) {
 		return NULL;
 	}
 }
+/*
+unequip_item method
+Removes by deallocation the item corresponding to the 'id' parameter from the entity items array
+In case the item is not found or the id is out of range, returns false.
+*/
 bool Entity::unequip_item(int id) {
 	if(id<MAX_ITEMS) {		//Checks if id is within range
 		if(items[id]!=NULL) {
 			delete(items[id]);
 			items[id]=NULL;		//NULL is used in 'Entity::equip_item' to check if the slot is free
 			return true;
-		} else {
-			return false;
 		}
 	}
+	return false;
+}
+/*
+hit method
+The current entity gets hit and loses 'value' number of hp
+*/
+bool hit(int value) {
+	if(value==0) return false;
+	current_hp = current_hp - value;
+	return true;
+}
+/*
+heal method
+The current entity gets healed by 'value' number of hp
+In case the current number of hp is higher than the maximum number of hp of the entity, it gets lowered to match that value
+*/
+bool heal(int value) {
+	if(value==0) return false;
+	current_hp = current_hp + value;
+	if(current_hp>stats[HP]) {
+		current_hp = stats[HP];
+	}
+	return true;
 }
 /* 
 The toString() function doesn't take count of attacks, items and armors
