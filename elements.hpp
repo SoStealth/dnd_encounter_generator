@@ -61,7 +61,7 @@ Atm is not used since the program uses the AC stat but may be implemented in the
 class Armor{
 private:char* name;
 	int ac_bonus;	//Flat bonus value the armor gives to an entity AC
-	int dex_max;	//Max dex modifier value the user can have while wearing the armor
+	int dex_max;	//Max dex modifier value the user can have while wearing the armor, if negative there is no limit
 	int magic_fail;	//Percentage of magic failure while wearing the armor
 public:	Armor(char*);	//Receives a serialized armor string
 	~Armor();
@@ -71,6 +71,9 @@ public:	Armor(char*);	//Receives a serialized armor string
 	int get_magic_fail();
 	char* toString();	//Serializator
 };
+/*
+
+*/
 Armor::Armor(char* s) {
 	char* temp;
 	temp = strtok(s,",");
@@ -111,11 +114,14 @@ Contains method to get attack results.
 class Attack{
 private:char* name;		//Name of the attack
 	int damage;			//Damage of the attack
-	int crit;			//Crit multiplier
+	int crit_value;			//Crit multiplier
+	int crit_range;			//Range for critical hits
+	int scaling;			//Stats which the weapon uses for scaling
 public: Attack(char*);			//Receives serialized attack string
 	~Attack();			//Destructor
-	int hit(int);			//Generate an attack with the weapon: bonus
-	int hurt(int);			//Generate damage value of the weapon: bonus
+	int get_scaling();
+	int attack_roll(int);			//Generate an attack with the weapon: bonus
+	int damage_roll(int);			//Generate damage value of the weapon: bonus
 	char* toString();
 };
 Attack::Attack(char* s) {
@@ -125,24 +131,33 @@ Attack::Attack(char* s) {
 	temp = strtok(NULL,",");
 	damage = atoi(temp);
 	temp = strtok(NULL,",");
-	crit = atoi(temp);
+	crit_value = atoi(temp);
+	temp = strtok(NULL,",");
+	crit_range = atoi(temp);
+	temp = strtok(NULL,",");
+	scaling = atoi(temp);
 }
 Attack::~Attack() {
 	free(name);
 }
-int Attack::hit(int bonus) {
+int Attack::get_scaling() {
+	return scaling;
+}
+int Attack::attack_roll(int bonus) {
 	int ret;
 	ret = throw_dice(D20) + bonus;
 	return ret;
 }
-int Attack::hurt(int bonus) {
+int Attack::damage_roll(int bonus, bool is_crit) {
 	int ret;
-	ret = throw_dice(damage) + bonus;
+	ret = throw_dice(damage);
+	if(is_crit) ret = ret * crit_value;
+	ret = ret + bonus;
 	return ret;
 }
 char* Attack::toString() {
 	char* ret;
-	asprintf(ret,"%s,%d,%d",name,damage,crit);
+	asprintf(ret,"%s,%d,%d,%d,%d",name,damage,crit_value,crit_range,scaling);
 	return ret;		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
