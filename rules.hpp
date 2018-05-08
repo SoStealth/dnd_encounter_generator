@@ -10,8 +10,8 @@ These rules are based on the 3.5 edition of D&D.
 Library will be updated every time a new function for applying a rule will be needed.
 */
 
-//Needed to generate random numbers for the 'throw' functions
-#include <random.h>
+#include <time.h>
+#include <stdlib.h>
 
 //Dice constants
 #define D100 100
@@ -26,7 +26,8 @@ int throw_dice(int);		//Receives number of dice faces
 int get_modifier(int);		//Receives a stat and return modifier
 
 int throw_dice(int faces) {
-	return randomInteger(1,faces);
+	srand(time(NULL));
+	return rand()%faces+1;
 }
 
 int get_modifier(int value) {
