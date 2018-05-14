@@ -58,6 +58,7 @@ This library contains classes used to represent the elements in the game.
 #define CAST 3
 #define ABILITY 4
 #define NOTHING 5
+#define MUSIC 6
 
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
@@ -688,9 +689,11 @@ char* Barbarian::toString() {
 //----------------------------------------------------------------------------------------------------------------------------------
 class Bard : public Caster{
 private:int spell_uses[BARD_SPELL_MAX_LEVEL];
+	int entertain;
 public:	Bard(char*);		//Receives serialized bard string
 	~Bard();
-	bool act();		//The character plays his turn, returns false if character cannot act (either by indecision or death)
+	int play();
+	bool act(bool,bool);	//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();	//Serializator
 };
 Bard::Bard(char* very_bardic_string) {
@@ -703,20 +706,30 @@ Bard::Bard(char* very_bardic_string) {
 	for(int i=0;i<BARD_SPELL_MAX_LEVEL;i++) {
 		spell_uses[BARD_SPELL_MAX_LEVEL] = table[stats[LEVEL]][i];
 	}
+	entertain = strtok(NULL,",");
 }
 Bard::~Bard() {
 	Caster::~Caster();
 }
-bool Bard::act(bool i_need_healing) {		//In case someone needs healing, the bard will authomatically try to heal him
+int Bard::play() {	//Plays music and tries to stop creatures from moving
+	int ret;
+	ret = throw_dice(D20) + get_modifier(stats[CHA]) + entertain;
+	return ret;
+}
+bool Bard::act(bool i_need_healing, bool cant) {	//In case someone needs healing, the bard will authomatically try to heal him
 	if(!is_alive()) {
 		return NOTHING;
 	}
 	thrashold = stats[HP]/2;
-	if(i_need_healing) {
+	if(i_need_healing && !cant) {
 		return HEAL;
 	}
 	if(current_hp>thrashold) {
-		return ATTACK;
+		if((rand()%2)!=0) {
+			return ATTACK;
+		} else {
+			return MUSIC;
+		}
 	} else {
 		for(int i=0;i<MAX_SPELLS;i++) {
 			if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
@@ -735,7 +748,9 @@ bool Bard::act(bool i_need_healing) {		//In case someone needs healing, the bard
 	}
 }
 char* Bard::toString() {
-	return Entity::toString();
+	char* ret;
+	asprintf(ret,"%s,%d",Entity::toString(),entertain);
+	return ret;
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
