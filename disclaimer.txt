@@ -1,0 +1,28 @@
+How the software works:
+The user will insert his D&D party, with classes and stats.
+At the start of the simulation, the software will create a random group of monsters partially based on CR. It will then simulate 
+some battles between party and monsters and draw a value based on the result of the battles. If this value matches the conditions for a
+"balanced encounter", it will output the monster data via file. Else, it will modify the monster group (adding or removing members or
+changing the type of monsters) to try and balance the value. If after N tries the software isn't able to create a balanced encounter it
+will return the closest result.
+------------------------------------------------------------------------------------------------------------------------------------------
+About the characters:
+For now, users will be able to only insert classes and stats for the characters, not equipment or spells. This way, the simulation will be
+based on standard characters, so that during the actual game people who gained stronger items or spells will be advantaged, as it should be.
+Anyway there is the possibility of creating and adding personal gear and magic, even tho not everything has been included yet (for example,
+only damage or heal spells are available right now, while buffing or other types of spells can't be created). Further versions of this
+software may include more options of character customization.
+------------------------------------------------------------------------------------------------------------------------------------------
+How the combat works:
+The combat, as of now, will consist in making characters and monster act randomly and in a random sequence. Every character and monster has
+his own pattern. At the end of the battle, a value will be generated. Then, a second simulation will start, generating a second value. This
+will repeat until N simulations (a higher N value means more precision while a lower means faster times). At the end, an average of all the
+N values will be calculated and that will represent the "balance value" of the encounter. Based on that, the monster group will be modified
+and the simulation will restart, or the output file will be created with the results.
+Each combat will also create a log file with every single combat step and throw result, so that the master can verify if the encounter is
+suited for his party.
+------------------------------------------------------------------------------------------------------------------------------------------
+Additional features:
+There is also the possibility of manually creating a group of monsters and launch the simulation, which will return the balance results of
+that encounter, so that the dungeon master can create personalized group of monsters and see a simple simulation of the combat between his
+party and the encounter
