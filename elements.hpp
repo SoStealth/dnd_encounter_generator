@@ -39,7 +39,8 @@ This library contains classes used to represent the elements in the game.
 #define MAX_ITEMS 10		//Max number of equipments an entity can carry
 #define MAX_STR 4096		//Max size of a string (used for serializators
 #define BARD_SPELL_MAX_LEVEL 6		//Max level of a bard spell
-#define ARCANE_SPELL_MAX_LEVEL 10	//Max level of an arcane spell
+#define ARCANE_SPELL_MAX_LEVEL 9	//Max level of an arcane spell
+#define CLERIC_SPELL_MAX_LEVEL 9	//Max level of a cleric spell
 
 //Spells constants
 #define S_ARCANE 0		//Used to identify arcane spells
@@ -50,15 +51,16 @@ This library contains classes used to represent the elements in the game.
 #define S_DRUID 5			//Used to identify druid spells
 
 //Tabs constants
-#define BARD_SPELLSLOTS	"bard_spellslots.txt"		//Tab for bard spellslot
+#define BARD_SPELLSLOTS	"bard_spellslots.txt"		//Tab for bard spellslots
+#define CLERIC_SPELLSLOTS "cleric_spellslots.txt"	//Tab for cleric spellslots
 
 //Action constants
-#define ATTACK 1
-#define HEAL 2
-#define CAST 3
-#define ABILITY 4
-#define NOTHING 5
-#define MUSIC 6
+#define ATTACK 1	//The character decides to attack
+#define HEAL 2		//The character decides to heal another character
+#define CAST 3		//The character decides to cast a spell
+#define ABILITY 4	//The character decides to use an ability
+#define NOTHING 5	//The character decides to do nothing (or can't do nothing)
+#define MUSIC 6		//Bards: the character starts playing
 
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
@@ -693,7 +695,7 @@ private:int spell_uses[BARD_SPELL_MAX_LEVEL];
 public:	Bard(char*);		//Receives serialized bard string
 	~Bard();
 	int play();
-	bool act(bool,bool);	//The character plays his turn, returns false if character cannot act (either by indecision or death)
+	int act(bool,bool);	//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();	//Serializator
 };
 Bard::Bard(char* very_bardic_string) {
@@ -703,7 +705,7 @@ Bard::Bard(char* very_bardic_string) {
 	FILE* file = fopen(BARD_SPELLSLOTS,"r");
 	get_table(file,MAX_LEVEL,BARD_SPELL_MAX_LEVEL,table);
 	fclose(file);
-	for(int i=0;i<BARD_SPELL_MAX_LEVEL;i++) {
+	for(int i=0;i<=BARD_SPELL_MAX_LEVEL;i++) {
 		spell_uses[BARD_SPELL_MAX_LEVEL] = table[stats[LEVEL]][i];
 	}
 	entertain = strtok(NULL,",");
@@ -716,7 +718,7 @@ int Bard::play() {	//Plays music and tries to stop creatures from moving
 	ret = throw_dice(D20) + get_modifier(stats[CHA]) + entertain;
 	return ret;
 }
-bool Bard::act(bool i_need_healing, bool cant) {	//In case someone needs healing, the bard will authomatically try to heal him
+int Bard::act(bool i_need_healing, bool cant) {	//In case someone needs healing, the bard will authomatically try to heal him
 	if(!is_alive()) {
 		return NOTHING;
 	}
@@ -754,11 +756,56 @@ char* Bard::toString() {
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
+private:int spell_uses[CLERIC_SPELL_MAX_LEVEL];
 public:	Cleric(char*);
 	~Cleric();
-	bool act();
+	int act(bool,bool);
 	char* toString();
 };
+Cleric::Cleric(char* s) {
+	Caster::Caster(s);
+	spell_type = S_CLERIC;
+	int table[MAX_LEVEL][CLERIC_SPELL_MAX_LEVEL];
+	FILE* file = fopen(CLERIC_SPELLSLOTS,"r");
+	get_table(file,MAX_LEVEL,CLERIC_SPELL_MAX_LEVEL,table);
+	fclose(file);
+	for(int i=0;i<=CLERIC_SPELL_MAX_LEVEL;i++) {
+		spell_uses[CLERIC_SPELL_MAX_LEVEL] = table[stats[LEVEL]][i];
+	}
+}
+Cleric::~Cleric() {
+	Caster::~Caster();
+}
+int Cleric::act(bool i_need_healing, bool cant) {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(i_need_healing && !cant) {
+		return HEAL;
+	}
+	if(current_hp>threshold) {
+		return ATTACK;
+	} else {
+		for(int i=0;i<MAX_SPELLS;i++) {
+			if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
+				spell_uses[spells[i].get_level()]--;
+				cast(this,spells[i]);
+				return NOTHING;
+			}
+		}
+		for(int i=0;i<MAX_ITEMS;i++) {
+			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+				heal(this,items[i].get_value());
+				return NOTHING;
+			}
+		}
+		return ATTACK;
+	}
+}
+char* Cleric::toString() {
+	return Caster::toString();	
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 class Druid : public Caster{
 private:int wild_shape_time;		//Number of turns that Wild Shape lasts
