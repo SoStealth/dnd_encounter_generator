@@ -41,6 +41,7 @@ This library contains classes used to represent the elements in the game.
 #define BARD_SPELL_MAX_LEVEL 6		//Max level of a bard spell
 #define ARCANE_SPELL_MAX_LEVEL 9	//Max level of an arcane spell
 #define CLERIC_SPELL_MAX_LEVEL 9	//Max level of a cleric spell
+#define DRUID_SPELL_MAX_LEVEL 9
 
 //Spells constants
 #define S_ARCANE 0		//Used to identify arcane spells
@@ -127,8 +128,7 @@ private:char* name;		//Name of the attack
 public: Attack(char*);			//Receives serialized attack string
 	~Attack();			//Destructor
 	int get_scaling();
-	int attack_roll(int);			//Generate an attack with the weapon: bonus
-	int damage_roll(int);			//Generate damage value of the weapon: bonus
+	void make_attack(int*,int*,int,int);		//Generate an attack with the weapon
 	char* toString();
 };
 Attack::Attack(char* s) {
@@ -150,7 +150,7 @@ Attack::~Attack() {
 int Attack::get_scaling() {
 	return scaling;
 }
-int Attack::attack_roll(int* attack_roll, int* damage_roll, int bab, int scale) {
+void Attack::make_attack(int* attack_roll, int* damage_roll, int bab, int scale) {
 	int roll = throw_dice(D20);
 	int crit = 20 - crit_range;
 	if(roll>crit) {
@@ -344,6 +344,9 @@ Entity::Entity(char* s) {
 	if(stats[LEVEL]>MAX_LEVEL) {
 		stats[LEVEL] = MAX_LEVEL;
 	}
+	stats[FORT] = stats[FORT] + get_modifier(stats[COS]);
+	stats[REFL] = stats[REFL] + get_modifier(stats[DEX]);
+	stats[WILL] = stats[WILL] + get_modifier(stats[WIS]);
 }
 Entity::~Entity() {			//Deletes all external objects and frees name
 	int i;
@@ -511,6 +514,17 @@ bool heal(int value) {
 	}
 	return true;
 }
+bool Entity::attack(Entity* target, Attack attack) {
+	int attack_roll;
+	int damage_roll;
+	int scale = get_modifier(stats[attack->get_scaling()]);
+	attack.make_attack(&attack_roll,&damage_roll,stats[BAB],scale);
+	if(attack_roll > target->get_ac()) {
+		target.hit(damage_roll);
+		return true;
+	}
+	return false;
+}
 /* 
 The toString() function doesn't take count of attacks, items and armors
 Those elements are going to be assigned randomly and balanced to create a balanced entity
@@ -519,11 +533,17 @@ This way in the actual game people who have gained stronger equipment will find 
 "It's not a bug, it's a feature!" -cit. YTMND
 */
 char* Entity::toString() {
+	stats[FORT] = stats[FORT] - get_modifier(stats[COS]);
+	stats[REFL] = stats[REFL] - get_modifier(stats[DEX]);
+	stats[WILL] = stats[WILL] - get_modifier(stats[WIS]);
 	char* ret;
 	asprintf(ret,"%s",name);
-	for(int i=0;i<N_BSTATS;i++) {		//Only base stats are serialized, because the rest can be calculated
+	for(int i=0;i<N_STATS;i++) {		//Only base stats are serialized, because the rest can be calculated
 		asprintf(ret,"%s,%d",ret,stats[i]);
 	}
+	stats[FORT] = stats[FORT] + get_modifier(stats[COS]);
+	stats[REFL] = stats[REFL] + get_modifier(stats[DEX]);
+	stats[WILL] = stats[WILL] + get_modifier(stats[WIS]);
 	return ret;		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -583,7 +603,17 @@ bool Caster::unequip_spell(int id) {
 	}
 }
 bool Caster::cast(Entity* target, Spell spell) {
-	
+	int cd = spell->get_cd(stats[LEVEL]);
+	int save = throw_dice(D20) + stats[spell->get_save_type()];
+	if(spell->is_heal()) {
+		target->heal(throw_dice(spell->get_value()));
+		return true;
+	}
+	if(save <= cd) {
+		target->hit(throw_dice(spell->get_value()));
+		return true;
+	}
+	return false;
 }
 char* Caster::toString() {
 	//this is almost useless because all Caster parameters are calculated, set or generated randomly
@@ -813,13 +843,68 @@ char* Cleric::toString() {
 //----------------------------------------------------------------------------------------------------------------------------------
 class Druid : public Caster{
 private:int wild_shape_time;		//Number of turns that Wild Shape lasts
-	Animal shape;		//When "wild_shape" is used, this is set to the Animal in which the druid transforms
+	Animal* shape;		//When "wild_shape" is used, this is set to the Animal in which the druid transforms
+	int spell_uses[DRUID_SPELL_MAX_LEVEL];
 public:	Druid(char*);
 	~Druid();
+	int wild_shape(s);		//Turn the druid into an animal for random turns
 	bool act();
-	int wild_shape();		//Turn the druid into an animal for random turns
 	char* toString();
 };
+Druid::Druid(char* s) {
+	Caster::Caster(s);
+	spell_type = S_DRUID;
+	int table[MAX_LEVEL][DRUID_SPELL_MAX_LEVEL];
+	FILE* file = fopen(DRUID_SPELLSLOTS,"r");
+	get_table(file,MAX_LEVEL,DRUID_SPELL_MAX_LEVEL,table);
+	fclose(file);
+	for(int i=0;i<=DRUID_SPELL_MAX_LEVEL;i++) {
+		spell_uses[DRUID_SPELL_MAX_LEVEL] = table[stats[LEVEL]][i];
+	}
+	shape = NULL;
+	wild_shape_time = 10*stats[level];
+}
+Druid::~Druid() {
+	delete(shape);
+	Caster::~Caster();
+}
+int Druid::wild_shape(char* s) {
+	if(wild_shape_time == 0 || stats[LEVEL]<5) {
+		shape = NULL;
+		return false;
+	}
+	if(shape == NULL) {
+		shape = new Animal(s);
+	}
+	wild_shape_time--;
+	return true;
+}
+int Druid::act() {	//SISTEMAREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE (wild_shape)
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(current_hp>threshold) {
+		return ATTACK;
+	} else {
+		for(int i=0;i<MAX_SPELLS;i++) {
+			if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
+				spell_uses[spells[i].get_level()]--;
+				cast(this,spells[i]);
+				return NOTHING;
+			}
+		}
+		for(int i=0;i<MAX_ITEMS;i++) {
+			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+				heal(this,items[i].get_value());
+				return NOTHING;
+			}
+		}
+		this->wild_shape();
+		return ATTACK;
+	}
+}
+
 //----------------------------------------------------------------------------------------------------------------------------------
 class Sorcerer : public Caster{
 public:	Sorcerer(char*);
