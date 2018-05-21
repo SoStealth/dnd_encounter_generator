@@ -38,10 +38,14 @@ This library contains classes used to represent the elements in the game.
 #define MAX_ATTACKS 5		//Max number of attacks an entity can have
 #define MAX_ITEMS 10		//Max number of equipments an entity can carry
 #define MAX_STR 4096		//Max size of a string (used for serializators
-#define BARD_SPELL_MAX_LEVEL 6		//Max level of a bard spell
-#define ARCANE_SPELL_MAX_LEVEL 9	//Max level of an arcane spell
-#define CLERIC_SPELL_MAX_LEVEL 9	//Max level of a cleric spell
-#define DRUID_SPELL_MAX_LEVEL 9
+//Every max level for spell is increased by 1 for array length purposes
+#define SPELL_MAX_LEVEL 10	//Max level of any spell
+#define BARD_SPELL_MAX_LEVEL 7		//Max level of a bard spell
+#define ARCANE_SPELL_MAX_LEVEL 10	//Max level of an arcane spell
+#define CLERIC_SPELL_MAX_LEVEL 10	//Max level of a cleric spell
+#define DRUID_SPELL_MAX_LEVEL 10	//Max level of a druid spell
+#define RANGER_SPELL_MAX_LEVEL 5	//Max level of a ranger spell
+#define PALADIN_SPELL_MAX_LEVEL 5	//Max level of a paladin spell
 
 //Spells constants
 #define S_ARCANE 0		//Used to identify arcane spells
@@ -54,6 +58,11 @@ This library contains classes used to represent the elements in the game.
 //Tabs constants
 #define BARD_SPELLSLOTS	"bard_spellslots.txt"		//Tab for bard spellslots
 #define CLERIC_SPELLSLOTS "cleric_spellslots.txt"	//Tab for cleric spellslots
+#define DRUID_SPELLSLOTS "druid_spellslots.txt"		//Tab for druid spellslots
+#define SORCERER_SPELLSLOTS "sorcerer_spellslots.txt"	//Tab for sorcerer spellslots
+#define RANGER_SPELLSLOTS "ranger_spellslots.txt"	//Tab for ranger spellslots
+#define PALADIN_SPELLSLOTS "paladin_spellslots.txt"	//Tab for paladin spellslots
+
 
 //Action constants
 #define ATTACK 1	//The character decides to attack
@@ -554,17 +563,22 @@ Contains known spells data and the method "cast" to be able to use them.
 */
 class Caster : public Entity{
 protected:Spell* spells;
+	int spell_uses[SPELL_MAX_LEVEL];
 	int spell_type;
 public:	Caster(char*);		//Receives serialized caster string
 	~Caster();
 	bool equip_spell(char*);	//True if spell gets equipped, false if there is no spell space
 	Spell get_spell(int);	//Receives spell identifier
 	bool unequip_spell(int);	//Receives spell identifier, true if spell has been unequipped, false if there is no spell
+	bool can_cast();
 	bool cast(Entity*,Spell);	//Target, spell
 	char* toString();	//Serializator
 };
 Caster::Caster(char* s) {
 	Entity::Entity(s);
+	for(int i=0;i<SPELL_MAX_LEVEL;i++) {
+		spell_uses[i] = 0;
+	}
 }
 Caster::~Caster() {
 	for(int i=0;i<n_spells;i++) {
@@ -601,6 +615,12 @@ bool Caster::unequip_spell(int id) {
 			return false;
 		}
 	}
+}
+bool Caster::can_cast() {
+	for(int i=0;i<SPELL_MAX_LEVEL;i++) {
+		if(spell_uses[i]>0) return true;
+	}
+	return false;
 }
 bool Caster::cast(Entity* target, Spell spell) {
 	int cd = spell->get_cd(stats[LEVEL]);
@@ -724,8 +744,7 @@ char* Barbarian::toString() {
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Bard : public Caster{
-private:int spell_uses[BARD_SPELL_MAX_LEVEL];
-	int entertain;
+private:int entertain;
 public:	Bard(char*);		//Receives serialized bard string
 	~Bard();
 	int play();
@@ -739,8 +758,8 @@ Bard::Bard(char* very_bardic_string) {
 	FILE* file = fopen(BARD_SPELLSLOTS,"r");
 	get_table(file,MAX_LEVEL,BARD_SPELL_MAX_LEVEL,table);
 	fclose(file);
-	for(int i=0;i<=BARD_SPELL_MAX_LEVEL;i++) {
-		spell_uses[BARD_SPELL_MAX_LEVEL] = table[stats[LEVEL]][i];
+	for(int i=0;i<BARD_SPELL_MAX_LEVEL;i++) {
+		spell_uses[i] = table[stats[LEVEL]][i];
 	}
 	entertain = strtok(NULL,",");
 }
@@ -752,14 +771,11 @@ int Bard::play() {	//Plays music and tries to stop creatures from moving
 	ret = throw_dice(D20) + get_modifier(stats[CHA]) + entertain;
 	return ret;
 }
-int Bard::act(bool i_need_healing, bool cant) {	//In case someone needs healing, the bard will authomatically try to heal him
+int Bard::act() {	//In case someone needs healing, the bard will authomatically try to heal him
 	if(!is_alive()) {
 		return NOTHING;
 	}
 	thrashold = stats[HP]/2;
-	if(i_need_healing && !cant) {
-		return HEAL;
-	}
 	if(current_hp>thrashold) {
 		if((rand()%2)!=0) {
 			return ATTACK;
@@ -767,17 +783,19 @@ int Bard::act(bool i_need_healing, bool cant) {	//In case someone needs healing,
 			return MUSIC;
 		}
 	} else {
-		for(int i=0;i<MAX_SPELLS;i++) {
-			if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
-				spell_uses[spells[i].get_level()]--;
-				cast(this,spells[i]);
-				return NOTHING;
+		if(this->can_cast()) {
+			for(int i=0;i<MAX_SPELLS;i++) {
+				if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
+					spell_uses[spells[i].get_level()]--;
+					cast(this,spells[i]);
+					return HEAL;
+				}
 			}
 		}
 		for(int i=0;i<MAX_ITEMS;i++) {
 			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
 				heal(this,items[i].get_value());
-				return NOTHING;
+				return HEAL;
 			}
 		}
 		return ATTACK;
@@ -790,7 +808,6 @@ char* Bard::toString() {
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
-private:int spell_uses[CLERIC_SPELL_MAX_LEVEL];
 public:	Cleric(char*);
 	~Cleric();
 	int act(bool,bool);
@@ -803,35 +820,34 @@ Cleric::Cleric(char* s) {
 	FILE* file = fopen(CLERIC_SPELLSLOTS,"r");
 	get_table(file,MAX_LEVEL,CLERIC_SPELL_MAX_LEVEL,table);
 	fclose(file);
-	for(int i=0;i<=CLERIC_SPELL_MAX_LEVEL;i++) {
-		spell_uses[CLERIC_SPELL_MAX_LEVEL] = table[stats[LEVEL]][i];
+	for(int i=0;i<CLERIC_SPELL_MAX_LEVEL;i++) {
+		spell_uses[i] = table[stats[LEVEL]][i];
 	}
 }
 Cleric::~Cleric() {
 	Caster::~Caster();
 }
-int Cleric::act(bool i_need_healing, bool cant) {
+int Cleric::act() {
 	if(!is_alive()) {
 		return NOTHING;
 	}
 	threshold = stats[HP]/2;
-	if(i_need_healing && !cant) {
-		return HEAL;
-	}
 	if(current_hp>threshold) {
 		return ATTACK;
 	} else {
-		for(int i=0;i<MAX_SPELLS;i++) {
-			if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
-				spell_uses[spells[i].get_level()]--;
-				cast(this,spells[i]);
-				return NOTHING;
+		if(this->can_cast()) {
+			for(int i=0;i<MAX_SPELLS;i++) {
+				if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
+					spell_uses[spells[i].get_level()]--;
+					cast(this,spells[i]);
+					return HEAL;
+				}
 			}
 		}
 		for(int i=0;i<MAX_ITEMS;i++) {
 			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
 				heal(this,items[i].get_value());
-				return NOTHING;
+				return HEAL;
 			}
 		}
 		return ATTACK;
@@ -844,7 +860,6 @@ char* Cleric::toString() {
 class Druid : public Caster{
 private:int wild_shape_time;		//Number of turns that Wild Shape lasts
 	Animal* shape;		//When "wild_shape" is used, this is set to the Animal in which the druid transforms
-	int spell_uses[DRUID_SPELL_MAX_LEVEL];
 public:	Druid(char*);
 	~Druid();
 	int wild_shape(s);		//Turn the druid into an animal for random turns
@@ -858,8 +873,8 @@ Druid::Druid(char* s) {
 	FILE* file = fopen(DRUID_SPELLSLOTS,"r");
 	get_table(file,MAX_LEVEL,DRUID_SPELL_MAX_LEVEL,table);
 	fclose(file);
-	for(int i=0;i<=DRUID_SPELL_MAX_LEVEL;i++) {
-		spell_uses[DRUID_SPELL_MAX_LEVEL] = table[stats[LEVEL]][i];
+	for(int i=0;i<DRUID_SPELL_MAX_LEVEL;i++) {
+		spell_uses[i] = table[stats[LEVEL]][i];
 	}
 	shape = NULL;
 	wild_shape_time = 10*stats[level];
@@ -879,7 +894,241 @@ int Druid::wild_shape(char* s) {
 	wild_shape_time--;
 	return true;
 }
-int Druid::act() {	//SISTEMAREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE (wild_shape)
+int Druid::act() {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(current_hp>threshold) {
+		if(shape!=NULL) {
+			this->wild_shape();
+		}
+		return ATTACK;
+	} else {
+		if(this->can_cast()) {
+			for(int i=0;i<MAX_SPELLS;i++) {
+				if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
+					spell_uses[spells[i].get_level()]--;
+					cast(this,spells[i]);
+					return NOTHING;
+				}
+			}
+		}
+		if(current_hp<5 && shape!=NULL) {
+			wild_shape_time = 0;
+		}
+		if(shape==NULL) {
+			for(int i=0;i<MAX_ITEMS;i++) {
+				if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+					heal(this,items[i].get_value());
+					return NOTHING;
+				}
+			}
+		}
+		char* animal = get_random_animal();
+		this->wild_shape();
+		return ATTACK;
+	}
+}
+char* Druid::toString() {
+	return Caster::toString();
+}
+//----------------------------------------------------------------------------------------------------------------------------------
+class Sorcerer : public Caster{
+public:	Sorcerer(char*);
+	~Sorcerer();
+	bool act();
+	char* toString();
+};
+Sorcerer::Sorcerer(char* s) {
+	Caster::Caster(s);
+	spell_type = S_ARCANE;
+	int table[MAX_LEVEL][ARCANE_SPELL_MAX_LEVEL];
+	FILE* file = fopen(SORCERER_SPELLSLOTS,"r");
+	get_table(file,MAX_LEVEL,ARCANE_SPELL_MAX_LEVEL,table);
+	fclose(file);
+	for(int i=0;i<ARCANE_SPELL_MAX_LEVEL;i++) {
+		spell_uses[i] = table[stats[LEVEL]][i];
+	}
+}
+Sorcerer::~Sorcerer() {
+	Caster::~Caster();
+}
+int Sorcerer::act() {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(current_hp>threshold) {
+		if((rand()%3)!=0 && this->can_cast()) {
+			return CAST;
+		} else {
+			return ATTACK;
+		}
+	} else {
+		for(int i=0;i<MAX_ITEMS;i++) {
+			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+				heal(this,items[i].get_value());
+				return HEAL;
+			}
+		}
+		if((rand()%3)!=0 && this->can_cast()) {
+			return CAST;
+		} else {
+			return ATTACK;
+		}
+	}
+}
+char* Sorcerer::toString() {
+	return Caster::toString();
+}
+//----------------------------------------------------------------------------------------------------------------------------------
+class Wizard : public Caster{
+public:	Wizard(char*);
+	~Wizard();
+	bool act();
+	char* toString();
+};
+Wizard::Wizard(char* s) {
+	Caster::Caster(s);
+	spell_type = S_ARCANE;
+	int table[MAX_LEVEL][ARCANE_SPELL_MAX_LEVEL];
+	FILE* file = fopen(SORCERER_SPELLSLOTS,"r");
+	get_table(file,MAX_LEVEL,ARCANE_SPELL_MAX_LEVEL,table);
+	fclose(file);
+	for(int i=0;i<ARCANE_SPELL_MAX_LEVEL;i++) {
+		spell_uses[i] = table[stats[LEVEL]][i];
+	}
+}
+Wizard::~Wizard() {
+	Caster::~Caster();
+}
+int Wizard::act() {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(current_hp>threshold) {
+		if((rand()%5)!=0 && this->can_cast()) {
+			return CAST;
+		} else {
+			return ATTACK;
+		}
+	} else {
+		for(int i=0;i<MAX_ITEMS;i++) {
+			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+				heal(this,items[i].get_value());
+				return HEAL;
+			}
+		}
+		if((rand()%3)!=0 && this->can_cast()) {
+			return CAST;
+		} else {
+			return ATTACK;
+		}
+	}
+}
+char* Wizard::toString() {
+	return Caster::toString();
+}
+//----------------------------------------------------------------------------------------------------------------------------------
+class Monk : public Entity{
+private:int body_integrity();
+public:	Monk(char*);
+	~Monk();
+	bool act();
+	char* toString();
+};
+Monk::Monk(char* s) {
+	Entity::Entity(s);
+	if(stats[LEVEL]>6) {
+		body_integrity = stats[LEVEL]*2;
+	} else {
+		body_integrity = 0;
+	}
+}
+int Monk::act() {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(current_hp>=threshold) {
+		return ATTACK;
+	} else {
+		if(body_integrity>0) {
+			while(body_integrity>0 && current_hp<stats[HP]) {
+				current_hp++;
+				body_integrity--;
+			}
+			return HEAL;
+		}
+		for(int i=0;i<MAX_ITEMS;i++) {
+			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+				heal(this,items[i].get_value());
+				return HEAL;
+			}
+		}
+		return ATTACK;
+	}
+}
+char* Monk::toString() {
+	return Entity::toString();
+}
+//----------------------------------------------------------------------------------------------------------------------------------
+class Fighter : public Entity{
+public:	Fighter(char*);
+	~Fighter();
+	bool act();
+	char* toString();
+};
+Fighter::Fighter(char* s) {
+	Entity::Entity(s);
+}
+Fighter::~Fighter() {
+	Entity::~Entity(s);
+}
+int Fighter::act() {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(current_hp>=threshold) {
+		return ATTACK;
+	} else {
+		for(int i=0;i<MAX_ITEMS;i++) {
+			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+				heal(this,items[i].get_value());
+				return HEAL;
+			}
+		}
+		return ATTACK;
+	}
+}
+char* Fighter::toString() {
+	return Entity::toString();
+}
+//----------------------------------------------------------------------------------------------------------------------------------
+class Ranger : public Caster{
+public:	Ranger(char*);
+	~Ranger();
+	bool act();
+	char* toString();
+};
+Ranger::Ranger(char* s) {
+	Caster::Caster(s);
+	spell_type = S_RANGER;
+	int table[MAX_LEVEL][RANGER_SPELL_MAX_LEVEL];
+	FILE* file = fopen(RANGER_SPELLSLOTS,"r");
+	get_table(file,MAX_LEVEL,RANGER_SPELL_MAX_LEVEL,table);
+	fclose(file);
+	for(int i=0;i<RANGER_SPELL_MAX_LEVEL;i++) {
+		spell_uses[i] = table[stats[LEVEL]][i];
+	}
+}
+Ranger::~Ranger() {
+	Caster::~Caster();
+}
+int Ranger::act() {
 	if(!is_alive()) {
 		return NOTHING;
 	}
@@ -887,11 +1136,13 @@ int Druid::act() {	//SISTEMAREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
 	if(current_hp>threshold) {
 		return ATTACK;
 	} else {
-		for(int i=0;i<MAX_SPELLS;i++) {
-			if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
-				spell_uses[spells[i].get_level()]--;
-				cast(this,spells[i]);
-				return NOTHING;
+		if(this->can_cast()) {
+			for(int i=0;i<MAX_SPELLS;i++) {
+				if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
+					spell_uses[spells[i].get_level()]--;
+					cast(this,spells[i]);
+					return NOTHING;
+				}
 			}
 		}
 		for(int i=0;i<MAX_ITEMS;i++) {
@@ -900,60 +1151,117 @@ int Druid::act() {	//SISTEMAREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
 				return NOTHING;
 			}
 		}
-		this->wild_shape();
 		return ATTACK;
 	}
 }
-
-//----------------------------------------------------------------------------------------------------------------------------------
-class Sorcerer : public Caster{
-public:	Sorcerer(char*);
-	~Sorcerer();
-	bool act();
-	char* toString();
-};
-//----------------------------------------------------------------------------------------------------------------------------------
-class Wizard : public Caster{
-public:	Wizard(char*);
-	~Wizard();
-	bool act();
-	char* toString();
-};
-//----------------------------------------------------------------------------------------------------------------------------------
-class Monk : public Entity{
-public:	Monk(char*);
-	~Monk();
-	bool act();
-	char* toString();
-};
-//----------------------------------------------------------------------------------------------------------------------------------
-class Fighter : public Entity{
-public:	Fighter(char*);
-	~Fighter();
-	bool act();
-	char* toString();
-};
-//----------------------------------------------------------------------------------------------------------------------------------
-class Ranger : public Caster{
-public:	Ranger(char*);
-	~Ranger();
-	bool act();
-	char* toString();
-};
+char* Ranger::toString() {
+	return Caster::toString();
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 class Rogue : public Entity{
+private:bool hidden;
 public:	Rogue(char*);
 	~Rogue();
 	bool act();
 	char* toString();
 };
+Rogue::Rogue(char* s) {
+	Entity::Entity(s);
+	hidden = false;
+}
+Rogue::~Rogue() {
+	Entity::~Entity(s);
+}
+int Rogue::act() {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(current_hp<threshold) {
+		for(int i=0;i<MAX_ITEMS;i++) {
+			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+				heal(this,items[i].get_value());
+				return HEAL;
+			}
+		}
+	}
+	if(!hidden) {
+		if(rand()%4==3) {
+			hidden=true;
+			stats[DEX] = stats[DEX] + 1000;
+			return ABILITY;
+		}
+	} else {
+		hidden = false;
+		stats[DEX] = stats[DEX] - 1000;
+		return ATTACK;
+	}
+}
+char* Rogue::toString() {
+	return Entity::toString();
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 class Paladin : public Caster{
+private:int lay_hand;
 public:	Paladin(char*);
 	~Paladin();
 	bool act();
 	char* toString();
 };
+Paladin::Paladin(char* s) {
+	Caster::Caster(s);
+	spell_type = S_PALADIN;
+	int table[MAX_LEVEL][PALADIN_SPELL_MAX_LEVEL];
+	FILE* file = fopen(PALADIN_SPELLSLOTS,"r");
+	get_table(file,MAX_LEVEL,PALADIN_SPELL_MAX_LEVEL,table);
+	fclose(file);
+	for(int i=0;i<PALADIN_SPELL_MAX_LEVEL;i++) {
+		spell_uses[i] = table[stats[LEVEL]][i];
+	}
+	lay_hand = 0;
+	if(get_modifier(stats[CHA])>0) {
+		lay_hand = stats[LEVEL] * get_modifier(stats[CHA]);
+	}
+}
+Paladin::~Paladin() {
+	Entity::~Entity(s);
+}
+int Paladin::act() {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	threshold = stats[HP]/2;
+	if(current_hp>=threshold) {
+		return ATTACK;
+	} else {
+		if(lay_hand>0) {
+			while(lay_hand>0 && current_hp<stats[HP]) {
+				current_hp++;
+				lay_hand--;
+			}
+			return HEAL;
+		}
+		if(this->can_cast()) {
+			for(int i=0;i<MAX_SPELLS;i++) {
+				if(spells[i]!=NULL && spells[i].is_heal() && spell_uses[spells[i].get_level()]>0) {
+					spell_uses[spells[i].get_level()]--;
+					cast(this,spells[i]);
+					return NOTHING;
+				}
+			}
+		}
+		for(int i=0;i<MAX_ITEMS;i++) {
+			if(items[i]!=NULL && items[i].is_heal() && items[i].use()) {
+				heal(this,items[i].get_value());
+				return HEAL;
+			}
+		}
+		return ATTACK;
+	}
+}
+char* Paladin::toString() {
+	return Entity::toString();
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 class Monster : public Entity{
 public:	Monster(char*);
