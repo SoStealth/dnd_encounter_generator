@@ -748,7 +748,7 @@ private:int entertain;
 public:	Bard(char*);		//Receives serialized bard string
 	~Bard();
 	int play();
-	int act(bool,bool);	//The character plays his turn, returns false if character cannot act (either by indecision or death)
+	int act();	//The character plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();	//Serializator
 };
 Bard::Bard(char* very_bardic_string) {
@@ -810,7 +810,7 @@ char* Bard::toString() {
 class Cleric : public Caster{
 public:	Cleric(char*);
 	~Cleric();
-	int act(bool,bool);
+	int act();
 	char* toString();
 };
 Cleric::Cleric(char* s) {
@@ -863,7 +863,7 @@ private:int wild_shape_time;		//Number of turns that Wild Shape lasts
 public:	Druid(char*);
 	~Druid();
 	int wild_shape(s);		//Turn the druid into an animal for random turns
-	bool act();
+	int act();
 	char* toString();
 };
 Druid::Druid(char* s) {
@@ -937,7 +937,7 @@ char* Druid::toString() {
 class Sorcerer : public Caster{
 public:	Sorcerer(char*);
 	~Sorcerer();
-	bool act();
+	int act();
 	char* toString();
 };
 Sorcerer::Sorcerer(char* s) {
@@ -986,7 +986,7 @@ char* Sorcerer::toString() {
 class Wizard : public Caster{
 public:	Wizard(char*);
 	~Wizard();
-	bool act();
+	int act();
 	char* toString();
 };
 Wizard::Wizard(char* s) {
@@ -1036,7 +1036,7 @@ class Monk : public Entity{
 private:int body_integrity();
 public:	Monk(char*);
 	~Monk();
-	bool act();
+	int act();
 	char* toString();
 };
 Monk::Monk(char* s) {
@@ -1078,7 +1078,7 @@ char* Monk::toString() {
 class Fighter : public Entity{
 public:	Fighter(char*);
 	~Fighter();
-	bool act();
+	int act();
 	char* toString();
 };
 Fighter::Fighter(char* s) {
@@ -1111,7 +1111,7 @@ char* Fighter::toString() {
 class Ranger : public Caster{
 public:	Ranger(char*);
 	~Ranger();
-	bool act();
+	int act();
 	char* toString();
 };
 Ranger::Ranger(char* s) {
@@ -1162,7 +1162,7 @@ class Rogue : public Entity{
 private:bool hidden;
 public:	Rogue(char*);
 	~Rogue();
-	bool act();
+	int act();
 	char* toString();
 };
 Rogue::Rogue(char* s) {
@@ -1205,7 +1205,7 @@ class Paladin : public Caster{
 private:int lay_hand;
 public:	Paladin(char*);
 	~Paladin();
-	bool act();
+	int act();
 	char* toString();
 };
 Paladin::Paladin(char* s) {
@@ -1264,11 +1264,29 @@ char* Paladin::toString() {
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Monster : public Entity{
+private:int natural_ac;
 public:	Monster(char*);
 	~Monster();
-	bool act();
+	int act();
 	char* toString();
 };
+Monster::Monster(char* s) {
+	Entity::Entity(s);
+	//aggiungere natural_ac
+}
+Monster::~Monster() {
+	Entity::~Entity(s);
+}
+int Monster::act() {
+	if(!is_alive()) {
+		return NOTHING;
+	}
+	return ATTACK;
+}
+char* Monster::toString() {
+	//aggiungere natural_ac
+	return Entity::toString();
+}
 //----------------------------------------------------------------------------------------------------------------------------------
 class Animal : public Entity{
 public:	Animal(char*);
