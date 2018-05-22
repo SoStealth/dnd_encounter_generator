@@ -92,15 +92,13 @@ public:	Armor(char*);	//Receives a serialized armor string
 	char* toString();	//Serializator
 };
 Armor::Armor(char* s) {
-	char* temp;
-	temp = strtok(s,",");
-	name = temp;
-	temp = strtok(NULL,",");
-	ac_bonus = atoi(temp);
-	temp = strtok(NULL,",");
-	dex_max = atoi(temp);
-	temp = strtok(NULL,",");
-	magic_fail = atoi(temp);
+	char** temp;
+	split(s,',',&temp);
+	name = strdup(temp[0]);
+	ac_bonus = atoi(temp[1]);
+	dex_max = atoi(temp[2]);
+	magic_fail = atoi(temp[3]);
+	free(temp);
 }
 Armor::~Armor() {
 	free(name);
@@ -141,17 +139,14 @@ public: Attack(char*);			//Receives serialized attack string
 	char* toString();
 };
 Attack::Attack(char* s) {
-	char* temp;
-	temp = strtok(s,",");
-	name = temp;
-	temp = strtok(NULL,",");
-	damage = atoi(temp);
-	temp = strtok(NULL,",");
-	crit_value = atoi(temp);
-	temp = strtok(NULL,",");
-	crit_range = atoi(temp);
-	temp = strtok(NULL,",");
-	scaling = atoi(temp);
+	char** temp;
+	split(s,',',&temp);
+	name = strdup(temp[0]);
+	damage = atoi(temp[1]);
+	crit_value = atoi(temp[2]);
+	crit_range = atoi(temp[3]);
+	scaling = atoi(temp[4]);
+	free(temp);
 }
 Attack::~Attack() {
 	free(name);
@@ -185,7 +180,7 @@ class Item{
 private:char* name;	//Name of the item
 	int value;	//Numeric value of the item
 	int uses;	//Number of uses for the item
-	bool heal;	//If true, the item is a healing item; if false, is a damage item
+	int heal;	//FLAG: if true, the item is a healing item; if false, is a damage item
 public:	Item();
 	~Item();
 	char* get_name();
@@ -196,14 +191,13 @@ public:	Item();
 	char* toString();
 };
 Item::Item(char* s) {
-	char* temp;
-	temp = strtok(s,",");
-	name = temp;
-	temp = strtok(NULL,",");
-	value = atoi(temp);
-	temp = strtok(NULL,",");
-	heal = (bool)(temp[0] - '0');		//Apparently subbing '0' to a character makes it an integer
+	char** temp;
+	split(s,',',&temp);
+	name = dupstr(temp[0]);
+	value = atoi(temp[1]);
+	heal = atoi(temp[2]);		//Apparently subbing '0' to a character makes it an integer
 	uses = throw_dice(D10);
+	free(temp);
 }
 Item::~Item() {
 	free(name);
@@ -218,7 +212,7 @@ int Item::get_uses() {
 	return uses;
 }
 bool Item::is_heal() {
-	return heal;
+	return (heal>0);
 }
 bool Item::use() {
 	if(uses>0) {
@@ -244,28 +238,26 @@ private:char* name;	//Name of the spell
 	int level;	//Level of the spell
 	int value;	//Dice used by the spell to determine the outcome value
 	int save_type;	//Type of saving throw used to evade the spell
-	bool heal;	//Determines wether the spell is a healing or damaging one
+	int heal;	//FLAG: Determines wether the spell is a healing or damaging one
 public:	Spell(char*);	//Receives a serialized spell string
 	~Spell();
 	char* get_name();
 	int get_level();
 	int get_value();
 	int get_save_type();
+	bool is_heal();
 	int get_dc(int);	//Receives spellcaster level
 	char* toString();
 };
 Spell::Spell(char* s) {
-	char* temp;
-	temp = strtok(s,",");
-	name = temp;
-	temp = strtok(NULL,",");
-	level = atoi(temp);
-	temp = strtok(NULL,",");
-	value = atoi(temp);
-	temp = strtok(NULL,",");
-	save_type = atoi(temp);
-	temp = strtok(NULL,",");
-	heal = atoi(temp);
+	char** temp;
+	split(s,',',&temp);
+	name = dupstr(temp[0]);
+	level = atoi(temp[1]);
+	value = atoi(temp[2]);
+	save_type = atoi(temp[3]);
+	heal = atoi(temp[4]);
+	free(temp);
 }
 Spell::~Spell() {
 	free(name);
@@ -286,7 +278,7 @@ int Spell::get_save_type() {
 	return save_type;
 }
 bool Spell::is_heal() {
-	return heal;
+	return (heal>0);
 }
 int Spell::get_dc(int caster_level) {
 	int ret;
