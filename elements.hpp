@@ -761,7 +761,7 @@ Bard::Bard(char* very_bardic_string) {
 	for(int i=0;i<BARD_SPELL_MAX_LEVEL;i++) {
 		spell_uses[i] = table[stats[LEVEL]][i];
 	}
-	entertain = strtok(NULL,",");
+	entertain = atoi(strtok(NULL,","));
 }
 Bard::~Bard() {
 	Caster::~Caster();
@@ -1272,7 +1272,7 @@ public:	Monster(char*);
 };
 Monster::Monster(char* s) {
 	Entity::Entity(s);
-	//aggiungere natural_ac
+	natural_ac = atoi(strtok(NULL,","));
 }
 Monster::~Monster() {
 	Entity::~Entity(s);
@@ -1284,13 +1284,22 @@ int Monster::act() {
 	return ATTACK;
 }
 char* Monster::toString() {
-	//aggiungere natural_ac
-	return Entity::toString();
+	char* ret;
+	asprintf(ret,"%s,%d",Entity::toString(),natural_ac);
+	return ret;
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Animal : public Entity{
 public:	Animal(char*);
 	~Animal();
-	bool act();		//The animal plays his turn, returns false if character cannot act (either by indecision or death)
 	char* toString();
 };
+Animal::Animal(char* s) {
+	Entity::Entity(s);
+}
+Animal::~Animal() {
+	Entity::~Entity(s);
+}
+char* Animal::toString() {
+	return Entity::toString();
+}
