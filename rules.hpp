@@ -22,6 +22,7 @@ Library will be updated every time a new function for applying a rule will be ne
 #define D6 6
 #define D4 4
 
+void init_random();		//Sets the seed for RNG
 int throw_dice(int);		//Receives number of dice faces
 int get_modifier(int);		//Receives a stat and return modifier
 
