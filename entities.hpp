@@ -9,6 +9,40 @@ This library contains classes used to represent the entities in the game.
 There are 3 types of entities: characters (represented by classes), monsters and animals
 */
 
+#include "equipments.hpp"
+
+//Tabs constants
+#define BARD_SPELLSLOTS	"bard_spellslots.txt"		//Tab for bard spellslots
+#define CLERIC_SPELLSLOTS "cleric_spellslots.txt"	//Tab for cleric spellslots
+#define DRUID_SPELLSLOTS "druid_spellslots.txt"		//Tab for druid spellslots
+#define SORCERER_SPELLSLOTS "sorcerer_spellslots.txt"	//Tab for sorcerer spellslots
+#define RANGER_SPELLSLOTS "ranger_spellslots.txt"	//Tab for ranger spellslots
+#define PALADIN_SPELLSLOTS "paladin_spellslots.txt"	//Tab for paladin spellslots
+
+//Action constants
+#define ATTACK 1	//The character decides to attack
+#define HEAL 2		//The character decides to heal another character
+#define CAST 3		//The character decides to cast a spell
+#define ABILITY 4	//The character decides to use an ability
+#define NOTHING 5	//The character decides to do nothing (or can't do nothing)
+#define MUSIC 6		//Bards: the character starts playing
+
+//Max constants
+#define MAX_LEVEL 20		//Maximum level allowed
+#define MAX_ARMOR 2		//Max number of armor an entity can have
+#define MAX_ATTACKS 5		//Max number of attacks an entity can have
+#define MAX_ITEMS 10		//Max number of equipments an entity can carry
+//Every max level for spell is increased by 1 for array length purposes
+#define SPELL_MAX_LEVEL 10	//Max level of any spell
+#define BARD_SPELL_MAX_LEVEL 7		//Max level of a bard spell
+#define ARCANE_SPELL_MAX_LEVEL 10	//Max level of an arcane spell
+#define CLERIC_SPELL_MAX_LEVEL 10	//Max level of a cleric spell
+#define DRUID_SPELL_MAX_LEVEL 10	//Max level of a druid spell
+#define RANGER_SPELL_MAX_LEVEL 5	//Max level of a ranger spell
+#define PALADIN_SPELL_MAX_LEVEL 5	//Max level of a paladin spell
+
+//------------------------------------------------------------------------------------------------------------------
+
 /*
 Entity
 This class contains basic attributes and methods for every entity in the game.
