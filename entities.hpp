@@ -367,14 +367,14 @@ bool Caster::can_cast() {
 	return false;
 }
 bool Caster::cast(Entity* target, Spell spell) {
-	int cd = spell->get_cd(stats[LEVEL]);
-	int save = throw_dice(D20) + stats[spell->get_save_type()];
+	int cd = spell.get_cd(stats[LEVEL]);
+	int save = throw_dice(D20) + target->get_stat(spell.get_save_type());
 	if(spell->is_heal()) {
-		target->heal(throw_dice(spell->get_value()));
+		target->heal(throw_dice(spell.get_value()));
 		return true;
 	}
 	if(save <= cd) {
-		target->hit(throw_dice(spell->get_value()));
+		target->hit(throw_dice(spell.get_value()));
 		return true;
 	}
 	return false;
@@ -505,7 +505,7 @@ Bard::Bard(char* very_bardic_string) {
 	for(int i=0;i<BARD_SPELL_MAX_LEVEL;i++) {
 		spell_uses[i] = table[stats[LEVEL]][i];
 	}
-	entertain = atoi(strtok(NULL,","));
+	entertain = stats[LEVEL] + get_modifier(stats[CHA]) + 3;
 }
 Bard::~Bard() {
 	Caster::~Caster();
@@ -546,9 +546,7 @@ int Bard::act() {	//In case someone needs healing, the bard will authomatically 
 	}
 }
 char* Bard::toString() {
-	char* ret;
-	asprintf(ret,"%s,%d",Entity::toString(),entertain);
-	return ret;
+	return Entity::toString();
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
