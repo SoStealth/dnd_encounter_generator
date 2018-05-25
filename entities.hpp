@@ -309,6 +309,7 @@ class Caster : public Entity{
 protected:Spell* spells;
 	int spell_uses[SPELL_MAX_LEVEL];
 	int spell_type;
+private:void load_spellslots(int,char*);
 public:	Caster(char*);		//Receives serialized caster string
 	~Caster();
 	bool equip_spell(char*);	//True if spell gets equipped, false if there is no spell space
@@ -322,6 +323,13 @@ Caster::Caster(char* s) {
 	Entity::Entity(s);
 	for(int i=0;i<SPELL_MAX_LEVEL;i++) {
 		spell_uses[i] = 0;
+	}
+}
+void Caster::load_spellslots(int class_spell_max_level, char* filename) {
+	int table[MAX_LEVEL][class_spell_max_level];
+	table = get_table(filename,MAX_LEVEL,class_spell_max_level);
+	for(int i=0;i<class_spell_max_level;i++) {
+		spell_uses[i] = table[stats[LEVEL]][i];
 	}
 }
 Caster::~Caster() {
@@ -498,13 +506,7 @@ public:	Bard(char*);		//Receives serialized bard string
 Bard::Bard(char* very_bardic_string) {
 	Caster::Caster(very_bardic_string);
 	spell_type = S_BARD;
-	int table[MAX_LEVEL][BARD_SPELL_MAX_LEVEL];
-	FILE* file = fopen(BARD_SPELLSLOTS,"r");
-	get_table(file,MAX_LEVEL,BARD_SPELL_MAX_LEVEL,table);
-	fclose(file);
-	for(int i=0;i<BARD_SPELL_MAX_LEVEL;i++) {
-		spell_uses[i] = table[stats[LEVEL]][i];
-	}
+	load_spellslots(BARD_SPELL_MAX_LEVEL,BARD_SPELLSLOTS);
 	entertain = stats[LEVEL] + get_modifier(stats[CHA]) + 3;
 }
 Bard::~Bard() {
@@ -558,13 +560,7 @@ public:	Cleric(char*);
 Cleric::Cleric(char* s) {
 	Caster::Caster(s);
 	spell_type = S_CLERIC;
-	int table[MAX_LEVEL][CLERIC_SPELL_MAX_LEVEL];
-	FILE* file = fopen(CLERIC_SPELLSLOTS,"r");
-	get_table(file,MAX_LEVEL,CLERIC_SPELL_MAX_LEVEL,table);
-	fclose(file);
-	for(int i=0;i<CLERIC_SPELL_MAX_LEVEL;i++) {
-		spell_uses[i] = table[stats[LEVEL]][i];
-	}
+	load_spellslots(CLERIC_SPELL_MAX_LEVEL,CLERIC_SPELLSLOTS);
 }
 Cleric::~Cleric() {
 	Caster::~Caster();
@@ -611,13 +607,7 @@ public:	Druid(char*);
 Druid::Druid(char* s) {
 	Caster::Caster(s);
 	spell_type = S_DRUID;
-	int table[MAX_LEVEL][DRUID_SPELL_MAX_LEVEL];
-	FILE* file = fopen(DRUID_SPELLSLOTS,"r");
-	get_table(file,MAX_LEVEL,DRUID_SPELL_MAX_LEVEL,table);
-	fclose(file);
-	for(int i=0;i<DRUID_SPELL_MAX_LEVEL;i++) {
-		spell_uses[i] = table[stats[LEVEL]][i];
-	}
+	load_spellslots(DRUID_SPELL_MAX_LEVEL,DRUID_SPELLSLOTS);
 	shape = NULL;
 	wild_shape_time = 10*stats[level];
 }
@@ -685,13 +675,7 @@ public:	Sorcerer(char*);
 Sorcerer::Sorcerer(char* s) {
 	Caster::Caster(s);
 	spell_type = S_ARCANE;
-	int table[MAX_LEVEL][ARCANE_SPELL_MAX_LEVEL];
-	FILE* file = fopen(SORCERER_SPELLSLOTS,"r");
-	get_table(file,MAX_LEVEL,ARCANE_SPELL_MAX_LEVEL,table);
-	fclose(file);
-	for(int i=0;i<ARCANE_SPELL_MAX_LEVEL;i++) {
-		spell_uses[i] = table[stats[LEVEL]][i];
-	}
+	load_spellslots(ARCANE_SPELL_MAX_LEVEL,SORCERER_SPELLSLOTS);
 }
 Sorcerer::~Sorcerer() {
 	Caster::~Caster();
@@ -734,13 +718,7 @@ public:	Wizard(char*);
 Wizard::Wizard(char* s) {
 	Caster::Caster(s);
 	spell_type = S_ARCANE;
-	int table[MAX_LEVEL][ARCANE_SPELL_MAX_LEVEL];
-	FILE* file = fopen(SORCERER_SPELLSLOTS,"r");
-	get_table(file,MAX_LEVEL,ARCANE_SPELL_MAX_LEVEL,table);
-	fclose(file);
-	for(int i=0;i<ARCANE_SPELL_MAX_LEVEL;i++) {
-		spell_uses[i] = table[stats[LEVEL]][i];
-	}
+	load_spellslots(ARCANE_SPELL_MAX_LEVEL,WIZARD_SPELLSLOTS);
 }
 Wizard::~Wizard() {
 	Caster::~Caster();
@@ -953,13 +931,7 @@ public:	Paladin(char*);
 Paladin::Paladin(char* s) {
 	Caster::Caster(s);
 	spell_type = S_PALADIN;
-	int table[MAX_LEVEL][PALADIN_SPELL_MAX_LEVEL];
-	FILE* file = fopen(PALADIN_SPELLSLOTS,"r");
-	get_table(file,MAX_LEVEL,PALADIN_SPELL_MAX_LEVEL,table);
-	fclose(file);
-	for(int i=0;i<PALADIN_SPELL_MAX_LEVEL;i++) {
-		spell_uses[i] = table[stats[LEVEL]][i];
-	}
+	load_spellslots(PALADIN_SPELL_MAX_LEVEL,PALADIN_SPELLSLOTS);
 	lay_hand = 0;
 	if(get_modifier(stats[CHA])>0) {
 		lay_hand = stats[LEVEL] * get_modifier(stats[CHA]);
