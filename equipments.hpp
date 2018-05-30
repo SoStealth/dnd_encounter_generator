@@ -16,7 +16,7 @@ This library contains classes used to represent the elements in the game.
 
 //MAX constants
 #define MAX_NAME 30		//Maximum length allowed for a name
-#define MAX_STR 4096		//Max size of a string (used for serializators)
+#define MAX_BUFFER 4096		//Max size of a string (used for serializators)
 
 //Spells constants
 #define S_ARCANE 0		//Used to identify arcane spells
@@ -58,7 +58,7 @@ Armor::~Armor() {
 	free(name);
 }
 char* Armor::get_name() {
-	return dupstr(name);	//FREE
+	return strdup(name);	//FREE
 }
 int Armor::get_ac_bonus() {
 	return ac_bonus;
@@ -70,9 +70,9 @@ int Armor::get_magic_fail() {
 	return magic_fail;
 }
 char* Armor::toString() {	
-	char* ret;
-	asprintf(ret,"%s,%d,%d,%d",name,ac_bonus,dex_max,magic_fail);
-	return ret;		//FREE
+	char ret[MAX_BUFFER];
+	sprintf(ret,"%s,%d,%d,%d",name,ac_bonus,dex_max,magic_fail);
+	return strdup(ret);		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
@@ -88,6 +88,7 @@ private:char* name;		//Name of the attack
 	int scaling;			//Stats which the weapon uses for scaling
 public: Attack(char*);			//Receives serialized attack string
 	~Attack();			//Destructor
+	char* get_name();
 	int get_scaling();
 	void make_attack(int*,int*,int,int);		//Generate an attack with the weapon
 	char* toString();
@@ -105,6 +106,9 @@ Attack::Attack(char* s) {
 Attack::~Attack() {
 	free(name);
 }
+char* Attack::get_name() {
+	return strdup(name);
+}
 int Attack::get_scaling() {
 	return scaling;
 }
@@ -119,9 +123,9 @@ void Attack::make_attack(int* attack_roll, int* damage_roll, int bab, int scale)
 	*attack_roll = roll + bab + scale;
 }
 char* Attack::toString() {
-	char* ret;
-	asprintf(ret,"%s,%d,%d,%d,%d",name,damage,crit_value,crit_range,scaling);
-	return ret;		//FREE
+	char ret[MAX_BUFFER];
+	sprintf(ret,"%s,%d,%d,%d,%d",name,damage,crit_value,crit_range,scaling);
+	return strdup(ret);		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
@@ -135,7 +139,7 @@ private:char* name;	//Name of the item
 	int value;	//Numeric value of the item
 	int uses;	//Number of uses for the item
 	int heal;	//FLAG: if true, the item is a healing item; if false, is a damage item
-public:	Item();
+public:	Item(char*);
 	~Item();
 	char* get_name();
 	int get_value();
@@ -147,7 +151,7 @@ public:	Item();
 Item::Item(char* s) {
 	char** temp;
 	split(s,',',&temp);
-	name = dupstr(temp[0]);
+	name = strdup(temp[0]);
 	value = atoi(temp[1]);
 	heal = atoi(temp[2]);		//Apparently subbing '0' to a character makes it an integer
 	uses = throw_dice(D10);
@@ -157,7 +161,7 @@ Item::~Item() {
 	free(name);
 }
 char* Item::get_name() {
-	return dupstr(name);	//FREE
+	return strdup(name);	//FREE
 }
 int Item::get_value() {
 	return value;
@@ -176,9 +180,9 @@ bool Item::use() {
 	return false;
 }
 char* Item::toString() {
-	char* ret;
-	asprintf(ret,"%s,%d,%d",name,value,heal);
-	return ret;		//FREE
+	char ret[MAX_BUFFER];
+	sprintf(ret,"%s,%d,%d",name,value,heal);
+	return strdup(ret);		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
@@ -206,7 +210,7 @@ public:	Spell(char*);	//Receives a serialized spell string
 Spell::Spell(char* s) {
 	char** temp;
 	split(s,',',&temp);
-	name = dupstr(temp[0]);
+	name = strdup(temp[0]);
 	level = atoi(temp[1]);
 	value = atoi(temp[2]);
 	save_type = atoi(temp[3]);
@@ -217,13 +221,10 @@ Spell::~Spell() {
 	free(name);
 }
 char* Spell::get_name() {
-	return dupstr(name);	//FREE
+	return strdup(name);	//FREE
 }
 int Spell::get_level() {
 	return level;
-}
-int Spell::get_uses() {
-	return uses;
 }
 int Spell::get_value() {
 	return value;
@@ -240,8 +241,8 @@ int Spell::get_dc(int caster_level) {
 	return ret;
 }
 char* Spell::toString() {
-	char* ret;
-	asprintf(ret,"%s,%d,%d,%d,%d",name,level,value,save_type,heal);
-	return ret;		//FREE
+	char ret[MAX_BUFFER];
+	sprintf(ret,"%s,%d,%d,%d,%d",name,level,value,save_type,heal);
+	return strdup(ret);		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
