@@ -44,6 +44,9 @@ There are 3 types of entities: characters (represented by classes), monsters and
 #define RANGER_SPELL_MAX_LEVEL 5	//Max level of a ranger spell
 #define PALADIN_SPELL_MAX_LEVEL 5	//Max level of a paladin spell
 
+//In case someone needs to attack but hasn't got any attacks
+#define MELEE "Melee attack,4,0,0,2"
+
 //------------------------------------------------------------------------------------------------------------------
 
 /*
@@ -274,9 +277,18 @@ bool Entity::heal(int value) {
 	}
 	return true;
 }
-bool Entity::attack(Entity* target, Attack* attack) {
+bool Entity::attack(Entity* target) {
 	int attack_roll;
 	int damage_roll;
+	Attack* attack = NULL;
+	for(int i=0;i<MAX_ATTACKS;i++) {
+		if(attacks[i]!=NULL) {
+			attack = new Attack(attacks[i]->toString());
+		}
+	}
+	if(attack == NULL) {
+		attack = new Attack(MELEE);
+	}
 	int scale = get_modifier(stats[attack->get_scaling()]);
 	attack->make_attack(&attack_roll,&damage_roll,stats[BAB],scale);
 	int critical = attack_roll - stats[BAB] - scale;
