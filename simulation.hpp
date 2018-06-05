@@ -1,5 +1,22 @@
 #include "entities.hpp"
 
+bool fight(Entity* battler, Entity* *enemies, int n_enemies) {
+	int target = rand()%n_enemies;
+	bool found = false;
+	for(int i=0;i<n_enemies && !found;i++) {
+		target++;
+		target = target%n_enemies;
+		if(enemies[target]->is_alive()) {
+			found = true;
+		}
+	}
+	if(found) {
+		battler->attack(enemies[target]);
+		return true;
+	}
+	return false;
+}
+
 int simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_monsters) {
 	int balance_value;
 	bool victory = false;
@@ -35,6 +52,13 @@ int simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_mon
 			int action = actor->act();
 			switch(action) {
 				case ATTACK:
+					if(enemy) {
+						fight(actor,characters,n_characters);
+					} else {
+						fight(actor,monsters,n_monsters);
+					}
+					break;
+				case CAST:
 					
 					break;
 				case NOTHING:
