@@ -14,21 +14,20 @@ There are 3 types of entities: characters (represented by classes), monsters and
 #define DEATH_VALUE -10
 
 //Tabs constants
-#define BARD_SPELLSLOTS	"bard_spellslots.txt"		//Tab for bard spellslots
-#define CLERIC_SPELLSLOTS "cleric_spellslots.txt"	//Tab for cleric spellslots
-#define DRUID_SPELLSLOTS "druid_spellslots.txt"		//Tab for druid spellslots
-#define SORCERER_SPELLSLOTS "sorcerer_spellslots.txt"	//Tab for sorcerer spellslots
-#define RANGER_SPELLSLOTS "ranger_spellslots.txt"	//Tab for ranger spellslots
-#define PALADIN_SPELLSLOTS "paladin_spellslots.txt"	//Tab for paladin spellslots
-#define WIZARD_SPELLSLOTS "wizard_spellslots.txt"	//Tab for wizard spellslots
+#define BARD_SPELLSLOTS	"tabs/bard_spellslots.csv"		//Tab for bard spellslots
+#define CLERIC_SPELLSLOTS "tabs/cleric_spellslots.csv"	//Tab for cleric spellslots
+#define DRUID_SPELLSLOTS "tabs/druid_spellslots.csv"		//Tab for druid spellslots
+#define SORCERER_SPELLSLOTS "tabs/sorcerer_spellslots.csv"	//Tab for sorcerer spellslots
+#define RANGER_SPELLSLOTS "tabs/ranger_spellslots.csv"	//Tab for ranger spellslots
+#define PALADIN_SPELLSLOTS "tabs/paladin_spellslots.csv"	//Tab for paladin spellslots
+#define WIZARD_SPELLSLOTS "tabs/wizard_spellslots.csv"	//Tab for wizard spellslots
 
 //Action constants
 #define ATTACK 1	//The character decides to attack
 #define HEAL 2		//The character decides to heal another character
 #define CAST 3		//The character decides to cast a spell
-#define ABILITY 4	//The character decides to use an ability
-#define NOTHING 5	//The character decides to do nothing (or can't do nothing)
-#define MUSIC 6		//Bards: the character starts playing
+#define NOTHING 4	//The character decides to do nothing (or can't do nothing)
+#define MUSIC 5		//Bards: the character starts playing
 
 //Max constants
 #define MAX_LEVEL 20		//Maximum level allowed
@@ -79,6 +78,7 @@ public:	Entity(char*);		//Receives serialized entity string
 	bool heal(int);		//Heals the entity by an amount, return false if heal has been neglected
 	/* Act methods: actions an entity can take */
 	bool attack(Entity*,Attack*);
+	bool heal_with_item();
 	char* toString();	//serializator
 };
 Entity::Entity(char* s) {
@@ -279,11 +279,21 @@ bool Entity::attack(Entity* target, Attack* attack) {
 	int damage_roll;
 	int scale = get_modifier(stats[attack->get_scaling()]);
 	attack->make_attack(&attack_roll,&damage_roll,stats[BAB],scale);
-	if(attack_roll > target->get_ac()) {
+	int critical = attack_roll - stats[BAB] - scale;
+	if(attack_roll > target->get_ac() || critical == 20) {
 		if(damage_roll<1)
 			damage_roll = 1;
 		target->hit(damage_roll);
 		return true;
+	}
+	return false;
+}
+bool Entity::heal_with_item() {
+	for(int i=0;i<MAX_ITEMS;i++) {
+		if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
+			heal(items[i]->get_value());
+			return true;
+		}
 	}
 	return false;
 }
@@ -325,7 +335,9 @@ public:	Caster(char*);		//Receives serialized caster string
 	Spell* get_spell(int);	//Receives spell identifier
 	bool unequip_spell(int);	//Receives spell identifier, true if spell has been unequipped, false if there is no spell
 	bool can_cast();
+	/* Act methods */
 	bool cast(Entity*,Spell*);	//Target, spell
+	bool heal_with_spell();
 	char* toString();	//Serializator
 };
 Caster::Caster(char* s) : Entity(s) {
@@ -397,6 +409,18 @@ bool Caster::cast(Entity* target, Spell* spell) {
 	}
 	return false;
 }
+bool Caster::heal_with_spell() {
+	if(this->can_cast()) {
+		for(int i=0;i<MAX_SPELLS;i++) {
+			if(spells[i]!=NULL && spells[i]->is_heal() && spell_uses[spells[i]->get_level()]>0) {
+				spell_uses[spells[i]->get_level()]--;
+				cast(this,spells[i]);
+				return true;
+			}
+		}
+	}
+	return false;
+}
 char* Caster::toString() {
 	//this is almost useless because all Caster parameters are calculated, set or generated randomly
 	char* ret;
@@ -414,7 +438,6 @@ public:	Barbarian(char*);	//Receives serialized barbarian string
 	char* toString();	//Serializator
 };
 Barbarian::Barbarian(char* s) : Entity(s) {
-	char* temp;
 	rage_time = 3 + get_modifier(stats[CON]);
 }
 Barbarian::~Barbarian() {
@@ -480,11 +503,8 @@ int Barbarian::act() {
 	if(current_hp>=threshold) {
 		return ATTACK;
 	} else {
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return NOTHING;
-			}
+		if(heal_with_item()) {
+			return NOTHING;
 		}
 		if(rage()) {
 			end_rage();
@@ -531,20 +551,8 @@ int Bard::act() {	//In case someone needs healing, the bard will authomatically 
 			return MUSIC;
 		}
 	} else {
-		if(this->can_cast()) {
-			for(int i=0;i<MAX_SPELLS;i++) {
-				if(spells[i]!=NULL && spells[i]->is_heal() && spell_uses[spells[i]->get_level()]>0) {
-					spell_uses[spells[i]->get_level()]--;
-					cast(this,spells[i]);
-					return NOTHING;
-				}
-			}
-		}
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return NOTHING;
-			}
+		if(heal_with_spell() || heal_with_item()) {
+			return NOTHING;
 		}
 		return ATTACK;
 	}
@@ -574,20 +582,8 @@ int Cleric::act() {
 	if(current_hp>threshold) {
 		return ATTACK;
 	} else {
-		if(this->can_cast()) {
-			for(int i=0;i<MAX_SPELLS;i++) {
-				if(spells[i]!=NULL && spells[i]->is_heal() && spell_uses[spells[i]->get_level()]>0) {
-					spell_uses[spells[i]->get_level()]--;
-					cast(this,spells[i]);
-					return NOTHING;
-				}
-			}
-		}
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return NOTHING;
-			}
+		if(heal_with_spell() || heal_with_item()) {
+			return NOTHING;
 		}
 		return ATTACK;
 	}
@@ -654,32 +650,24 @@ int Druid::act() {
 	if(current_hp>threshold) {
 		if(shape!=NULL) {
 			this->wild_shape("");
+		} else {
+			char* animal = "Test animal,1,10,6,10,14,8,14,16,0,0,0,2";
+			this->wild_shape(animal);
+			return NOTHING;
 		}
 		return ATTACK;
 	} else {
-		if(this->can_cast()) {
-			for(int i=0;i<MAX_SPELLS;i++) {
-				if(spells[i]!=NULL && spells[i]->is_heal() && spell_uses[spells[i]->get_level()]>0) {
-					spell_uses[spells[i]->get_level()]--;
-					cast(this,spells[i]);
-					return NOTHING;
-				}
-			}
+		if(heal_with_spell()) {
+			return NOTHING;
 		}
 		if(current_hp<5 && shape!=NULL) {
 			wild_shape_time = 0;
 		}
 		if(shape==NULL) {
-			for(int i=0;i<MAX_ITEMS;i++) {
-				if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-					heal(items[i]->get_value());
-					return NOTHING;
-				}
+			if(heal_with_item()) {
+				return NOTHING;
 			}
 		}
-		//char* animal = get_random_animal();
-		char* animal = "Test animal,1,10,6,10,14,8,14,16,0,0,0,2";
-		this->wild_shape(animal);
 		return ATTACK;
 	}
 }
@@ -711,11 +699,8 @@ int Sorcerer::act() {
 			return ATTACK;
 		}
 	} else {
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return HEAL;
-			}
+		if(heal_with_item()) {
+			return NOTHING;
 		}
 		if((rand()%3)!=0 && this->can_cast()) {
 			return CAST;
@@ -752,11 +737,8 @@ int Wizard::act() {
 			return ATTACK;
 		}
 	} else {
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return HEAL;
-			}
+		if(heal_with_item()) {
+			return NOTHING;
 		}
 		if((rand()%3)!=0 && this->can_cast()) {
 			return CAST;
@@ -800,11 +782,8 @@ int Monk::act() {
 			}
 			return HEAL;
 		}
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return HEAL;
-			}
+		if(heal_with_item()) {
+			return NOTHING;
 		}
 		return ATTACK;
 	}
@@ -831,11 +810,8 @@ int Fighter::act() {
 	if(current_hp>=threshold) {
 		return ATTACK;
 	} else {
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return HEAL;
-			}
+		if(heal_with_item()) {
+			return NOTHING;
 		}
 		return ATTACK;
 	}
@@ -864,20 +840,8 @@ int Ranger::act() {
 	if(current_hp>threshold) {
 		return ATTACK;
 	} else {
-		if(this->can_cast()) {
-			for(int i=0;i<MAX_SPELLS;i++) {
-				if(spells[i]!=NULL && spells[i]->is_heal() && spell_uses[spells[i]->get_level()]>0) {
-					spell_uses[spells[i]->get_level()]--;
-					cast(this,spells[i]);
-					return NOTHING;
-				}
-			}
-		}
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return NOTHING;
-			}
+		if(heal_with_spell() || heal_with_item()) {
+			return NOTHING;
 		}
 		return ATTACK;
 	}
@@ -891,6 +855,7 @@ private:bool hidden;
 public:	Rogue(char*);
 	~Rogue();
 	int act();
+	bool attack(Entity*,Attack*);
 	char* toString();
 };
 Rogue::Rogue(char* s) : Entity(s) {
@@ -900,28 +865,47 @@ Rogue::~Rogue() {
 }
 int Rogue::act() {
 	if(!is_alive()) {
+		printf("Dead");
 		return NOTHING;
 	}
 	int threshold = stats[HP]/2;
 	if(current_hp<threshold) {
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return HEAL;
-			}
+		if(heal_with_item()) {
+			return NOTHING;
 		}
 	}
 	if(!hidden) {
-		if(rand()%4==3) {
+		if(rand()%3==2) {
 			hidden = true;
 			stats[DEX] = stats[DEX] + 1000;
-			return ABILITY;
 		}
-	} else {
-		hidden = false;
-		stats[DEX] = stats[DEX] - 1000;
-		return ATTACK;
+		return NOTHING;
 	}
+	return ATTACK;
+}
+bool Rogue::attack(Entity* target, Attack* attack) {
+	int attack_roll;
+	int damage_roll;
+	if(hidden) {
+		stats[DEX] = stats[DEX] - 1000;
+	}
+	int scale = get_modifier(stats[attack->get_scaling()]);
+	attack->make_attack(&attack_roll,&damage_roll,stats[BAB],scale);
+	if(hidden) {
+		hidden = false;
+		int bonus_dices = (stats[LEVEL]-1)/2+1;
+		for(int k=0;k<bonus_dices;k++) {
+			damage_roll = damage_roll + throw_dice(D6);
+		}
+	}
+	int critical = attack_roll - stats[BAB] - scale;
+	if(attack_roll > target->get_ac() || critical == 20) {
+		if(damage_roll<1)
+			damage_roll = 1;
+		target->hit(damage_roll);
+		return true;
+	}
+	return false;
 }
 char* Rogue::toString() {
 	return Entity::toString();
@@ -957,22 +941,10 @@ int Paladin::act() {
 				current_hp++;
 				lay_hand--;
 			}
-			return HEAL;
+			return NOTHING;
 		}
-		if(this->can_cast()) {
-			for(int i=0;i<MAX_SPELLS;i++) {
-				if(spells[i]!=NULL && spells[i]->is_heal() && spell_uses[spells[i]->get_level()]>0) {
-					spell_uses[spells[i]->get_level()]--;
-					cast(this,spells[i]);
-					return NOTHING;
-				}
-			}
-		}
-		for(int i=0;i<MAX_ITEMS;i++) {
-			if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-				heal(items[i]->get_value());
-				return HEAL;
-			}
+		if(heal_with_spell() || heal_with_item()) {
+			return NOTHING;
 		}
 		return ATTACK;
 	}
