@@ -80,7 +80,7 @@ public:	Entity(char*);		//Receives serialized entity string
 	bool hit(int);		//Hits the entity and lowers his hp, return false if damage has been neglected
 	bool heal(int);		//Heals the entity by an amount, return false if heal has been neglected
 	/* Act methods: actions an entity can take */
-	bool attack(Entity*,Attack*);
+	int attack(Entity*);
 	bool heal_with_item();
 	char* toString();	//serializator
 };
@@ -277,7 +277,7 @@ bool Entity::heal(int value) {
 	}
 	return true;
 }
-bool Entity::attack(Entity* target) {
+int Entity::attack(Entity* target) {
 	int attack_roll;
 	int damage_roll;
 	Attack* attack = NULL;
@@ -296,9 +296,9 @@ bool Entity::attack(Entity* target) {
 		if(damage_roll<1)
 			damage_roll = 1;
 		target->hit(damage_roll);
-		return true;
+		return damage_roll;
 	}
-	return false;
+	return 0;
 }
 bool Entity::heal_with_item() {
 	for(int i=0;i<MAX_ITEMS;i++) {
@@ -348,7 +348,7 @@ public:	Caster(char*);		//Receives serialized caster string
 	bool unequip_spell(int);	//Receives spell identifier, true if spell has been unequipped, false if there is no spell
 	bool can_cast();
 	/* Act methods */
-	bool cast(Entity*,Spell*);	//Target, spell
+	int cast(Entity*,bool);	//Target, spell
 	bool heal_with_spell();
 	char* toString();	//Serializator
 };
@@ -408,18 +408,28 @@ bool Caster::can_cast() {
 	}
 	return false;
 }
-bool Caster::cast(Entity* target, Spell* spell) {
+int Caster::cast(Entity* target, bool heal) {
+	Spell* spell = NULL;
+	for(int i=0;i<MAX_ATTACKS;i++) {
+		if(spells[i]!=NULL && heal==spells[i]->is_heal()) {
+			spell = new Spell(spells[i]->toString());
+		}
+	}
+	if(spell == NULL) {
+		return 0;
+	}
 	int cd = spell->get_dc(stats[LEVEL]);
 	int save = throw_dice(D20) + target->get_stat(spell->get_save_type());
 	if(spell->is_heal()) {
 		target->heal(throw_dice(spell->get_value()));
-		return true;
+		return 0;
 	}
 	if(save <= cd) {
-		target->hit(throw_dice(spell->get_value()));
-		return true;
+		int ret = throw_dice(spell->get_value());
+		target->hit(ret);
+		return ret;
 	}
-	return false;
+	return 0;
 }
 bool Caster::heal_with_spell() {
 	if(this->can_cast()) {
@@ -548,6 +558,9 @@ Bard::~Bard() {
 int Bard::play() {	//Plays music and tries to stop creatures from moving
 	int ret;
 	ret = throw_dice(D20) + get_modifier(stats[CHA]) + entertain;
+	if(ret<1) {
+		ret = 1;
+	}
 	return ret;
 }
 int Bard::act() {	//In case someone needs healing, the bard will authomatically try to heal him

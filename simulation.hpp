@@ -1,6 +1,14 @@
 #include "entities.hpp"
-
-bool fight(Entity* battler, Entity* *enemies, int n_enemies) {
+//-------------------------------------------------------------------------------------------
+int init_balance_value(Entity** a1, int n1) {
+	int value = 0;
+	for(int v=0;v<n1;v++) {
+		value = value + a1[v]->get_current_hp(); 
+	}
+	return value;
+}
+//-------------------------------------------------------------------------------------------
+int fight(Entity* battler, Entity* *enemies, int n_enemies) {
 	int target = rand()%n_enemies;
 	bool found = false;
 	for(int i=0;i<n_enemies && !found;i++) {
@@ -11,24 +19,49 @@ bool fight(Entity* battler, Entity* *enemies, int n_enemies) {
 		}
 	}
 	if(found) {
-		battler->attack(enemies[target]);
-		return true;
+		int ret = battler->attack(enemies[target]);
+		return ret;
 	}
-	return false;
+	return 0;
 }
-
+//-------------------------------------------------------------------------------------------
+int magic_fight(Entity* battler, Entity* *enemies, int n_enemies) {
+	int target = rand()%n_enemies;
+	bool found = false;
+	for(int i=0;i<n_enemies && !found;i++) {
+		target++;
+		target = target%n_enemies;
+		if(enemies[target]->is_alive()) {
+			found = true;
+		}
+	}
+	if(found) {
+		int ret = battler->cast(enemies[target],false);
+		return ret;
+	}
+	return 0; 
+}
+//-------------------------------------------------------------------------------------------
 int simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_monsters) {
-	int balance_value;
+	int c_start_value = 0;
+	int m_start_value = 0;
+	int c_actual_value = 0;
+	int m_actual_value = 0;
+
 	bool victory = false;
 	bool defeat = false;
+
+	c_start_value = init_balance_value(characters,n_characters);
+	m_start_value = init_balance_value(monsters,n_monsters);
 	
-	while(!victory && !defeat) {
+	while(!victory && !defeat) { 	//THIS IS A FULL ROUND
 		int c_counter = 0;
 		int m_counter = 0;
+		int music = 0;
 		Entity* actor = NULL;
 		
 		//Repeats until every character and every monster has acted -----
-		while(c_counter<n_characters || m_counter<n_monsters) {
+		while(c_counter<n_characters || m_counter<n_monsters) {		//THIS IS A TURN
 			
 			//Randomly selects which entities go first --------------
 			bool enemy;
@@ -50,18 +83,36 @@ int simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_mon
 			//--------------------------------------------------------
 			
 			int action = actor->act();
+			if( (enemy&&music>0) || (!enemy&&music<0) ) {
+				int threshold = music;
+				if(threshold<1)
+					threshold = threshold * -1;
+				int value = throw_dice(D20) + actor->get_stat(WILL);
+				if(value<threshold) {
+					action = NOTHING;
+				}
+			}
 			switch(action) {
 				case ATTACK:
 					if(enemy) {
-						fight(actor,characters,n_characters);
+						m_actual_value += fight(actor,characters,n_characters);
 					} else {
-						fight(actor,monsters,n_monsters);
+						c_actual_value += fight(actor,monsters,n_monsters);
 					}
 					break;
 				case CAST:
-					
+					if(enemy) {
+						m_actual_value += magic_fight();
+					} else {
+						c_actual_value += magic_fight();
+					}
 					break;
 				case NOTHING:
+					break;
+				case MUSIC:
+					music = actor->play();
+					if(enemy)
+						music = music * -1;
 					break;
 			}
 		}
@@ -81,6 +132,20 @@ int simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_mon
 			}
 		}
 		//---------------------------------------------
-	}	
+	}
+
+	int balance_value;
+	int c_value;
+	int m_value;
+	c_value = c_start_value - (c_actual_value*3);
+	m_value = m_start_value - m_actual_value;
+	balance_value = c_value - m_value;
+
+	/*
+	Se il balance_value è minore di 0, i mostri hanno inflitto troppi danni
+	Se il balance_value è maggiore di 0, i mostri hanno inflitto troppi pochi danni
+	SISTEMARE STA ROBA!
+	*/
+
 	return balance_value;
 }
