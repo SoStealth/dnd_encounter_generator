@@ -109,6 +109,7 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 					}
 					break;
 				case NOTHING:
+					printf("Nothing happens\n");
 					break;
 				case MUSIC:
 					music = actor->play();
@@ -116,6 +117,8 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 						music = music * -1;
 					break;
 			}
+			
+			actor = NULL;
 		}
 		//-----------------------------------------------------------------
 		
@@ -133,7 +136,7 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 			}
 		}
 		//---------------------------------------------
-		
+
 		turns++;
 	}
 
@@ -143,5 +146,5 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 	
 	sprintf(balance_values,"%d,%d,%d",c_value,m_value,turns);
 
-	return strdup(balance_value);
+	return strdup(balance_values);
 }

@@ -83,6 +83,20 @@ public:	Entity(char*);		//Receives serialized entity string
 	int attack(Entity*);
 	bool heal_with_item();
 	char* toString();	//serializator
+	/* METODI DICHIARATI PER EREDITARIETA' */
+	bool equip_spell(char*);
+	Spell* get_spell(int);
+	bool unequip_spell(int);
+	bool can_cast();
+	int cast(Entity*,bool);
+	bool heal_with_spell();
+	bool rage();
+	bool end_rage();
+	bool wild_shape(char*);
+	bool is_animal();
+	int play();
+	int act();
+	/* ----------------------------------- */
 };
 Entity::Entity(char* s) {
 	char** temp;
@@ -289,7 +303,12 @@ int Entity::attack(Entity* target) {
 	if(attack == NULL) {
 		attack = new Attack(MELEE);
 	}
-	int scale = get_modifier(stats[attack->get_scaling()]);
+	int scale;
+	if(attack->get_scaling()!=0) {
+		scale = get_modifier(stats[attack->get_scaling()]);
+	} else {
+		scale = 0;
+	}
 	attack->make_attack(&attack_roll,&damage_roll,stats[BAB],scale);
 	int critical = attack_roll - stats[BAB] - scale;
 	if(attack_roll > target->get_ac() || critical == 20) {
@@ -330,6 +349,44 @@ char* Entity::toString() {
 	stats[WILL] = stats[WILL] + get_modifier(stats[WIS]);
 	return strdup(ret);		//FREE
 }
+
+bool Entity::equip_spell(char*) {
+	return false;
+}
+Spell* Entity::get_spell(int) {
+	return NULL;
+}
+bool Entity::unequip_spell(int)  {
+	return false;
+}
+bool Entity::can_cast() {
+	return false;
+}
+int Entity::cast(Entity*,bool) {
+	return 0;
+}
+bool Entity::heal_with_spell() {
+	return false;
+}
+bool Entity::rage() {
+	return false;
+}
+bool Entity::end_rage() {
+	return false;
+}
+bool Entity::wild_shape(char*) {
+	return false;
+}
+bool Entity::is_animal() {
+	return false;
+}
+int Entity::play() {
+	return 0;
+}
+int Entity::act() {
+	return NOTHING;
+}
+
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
 Caster
@@ -982,7 +1039,7 @@ class Monster : public Entity{
 private:int natural_ac;
 public:	Monster(char*);
 	~Monster();
-	bool set_stat(int);
+	bool set_stat(int,int);
 	int act();
 	char* toString();
 };
