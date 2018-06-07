@@ -138,7 +138,7 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 	}
 
 	char balance_values[MAX_BUFFER];
-	int c_value = c_start_value - c_actual_value;
+	int c_value = c_start_value - (3*c_actual_value);
 	int m_value = m_start_value - m_actual_value;
 	sprintf(balance_values,"%d,%d,%d",c_value,m_value,turns);
 
