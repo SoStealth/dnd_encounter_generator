@@ -982,6 +982,7 @@ class Monster : public Entity{
 private:int natural_ac;
 public:	Monster(char*);
 	~Monster();
+	bool set_stat(int);
 	int act();
 	char* toString();
 };
@@ -991,6 +992,14 @@ Monster::Monster(char* s) : Entity(s) {
 	natural_ac = atoi(temp[13]);
 }
 Monster::~Monster() {
+}
+bool Monster::set_stat(int id, int value) {
+	if(id<N_STATS && value>0) {		//Checks if id is within range
+		stats[id] = value;
+		return true;
+	} else {
+		return false;
+	}
 }
 int Monster::act() {
 	if(!is_alive()) {
