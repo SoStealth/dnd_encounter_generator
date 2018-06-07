@@ -96,16 +96,16 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 			switch(action) {
 				case ATTACK:
 					if(enemy) {
-						m_actual_value += fight(actor,characters,n_characters);
+						c_actual_value += fight(actor,characters,n_characters);
 					} else {
-						c_actual_value += fight(actor,monsters,n_monsters);
+						m_actual_value += fight(actor,monsters,n_monsters);
 					}
 					break;
 				case CAST:
 					if(enemy) {
-						m_actual_value += magic_fight();
+						c_actual_value += magic_fight(actor,characters,n_characters);
 					} else {
-						c_actual_value += magic_fight();
+						m_actual_value += magic_fight(actor,monsters,n_monsters);
 					}
 					break;
 				case NOTHING:
