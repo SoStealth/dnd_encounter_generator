@@ -42,11 +42,12 @@ int magic_fight(Entity* battler, Entity* *enemies, int n_enemies) {
 	return 0; 
 }
 //-------------------------------------------------------------------------------------------
-int simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_monsters) {
+char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_monsters) {
 	int c_start_value = 0;
 	int m_start_value = 0;
 	int c_actual_value = 0;
 	int m_actual_value = 0;
+	int turns = 0;
 
 	bool victory = false;
 	bool defeat = false;
@@ -132,20 +133,14 @@ int simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_mon
 			}
 		}
 		//---------------------------------------------
+		
+		turns++;
 	}
 
-	int balance_value;
-	int c_value;
-	int m_value;
-	c_value = c_start_value - (c_actual_value*3);
-	m_value = m_start_value - m_actual_value;
-	balance_value = c_value - m_value;
+	char balance_values[MAX_BUFFER];
+	int c_value = c_start_value - c_actual_value;
+	int m_value = m_start_value - m_actual_value;
+	sprintf(balance_values,"%d,%d,%d",c_value,m_value,turns);
 
-	/*
-	Se il balance_value è minore di 0, i mostri hanno inflitto troppi danni
-	Se il balance_value è maggiore di 0, i mostri hanno inflitto troppi pochi danni
-	SISTEMARE STA ROBA!
-	*/
-
-	return balance_value;
+	return strdup(balance_value);
 }
