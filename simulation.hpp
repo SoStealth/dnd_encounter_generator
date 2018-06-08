@@ -83,7 +83,49 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 			}
 			//--------------------------------------------------------
 			
-			int action = actor->act();
+			int action;
+			switch(actor->get_stat(CLASS)) {
+				case BARBARIAN:
+					action = dynamic_cast<Barbarian*>(actor)->act();
+					break;
+				case BARD:
+					action = dynamic_cast<Bard*>(actor)->act();
+					break;
+				case CLERIC:
+					action = dynamic_cast<Cleric*>(actor)->act();
+					break;
+				case DRUID:
+					action = dynamic_cast<Druid*>(actor)->act();
+					break;
+				case SORCERER:
+					action = dynamic_cast<Sorcerer*>(actor)->act();
+					break;
+				case WIZARD:
+					action = dynamic_cast<Wizard*>(actor)->act();
+					break;
+				case MONK:
+					action = dynamic_cast<Monk*>(actor)->act();
+					break;
+				case FIGHTER:
+					action = dynamic_cast<Fighter*>(actor)->act();
+					break;
+				case RANGER:
+					action = dynamic_cast<Ranger*>(actor)->act();
+					break;
+				case ROGUE:
+					action = dynamic_cast<Rogue*>(actor)->act();
+					break;
+				case PALADIN:
+					action = dynamic_cast<Paladin*>(actor)->act();
+					break;
+				case ANIMAL:
+					action = dynamic_cast<Animal*>(actor)->act();
+					break;
+				case MONSTER:
+					action = dynamic_cast<Monster*>(actor)->act();
+					break;
+			}
+
 			if( (enemy&&music>0) || (!enemy&&music<0) ) {
 				int threshold = music;
 				if(threshold<1)
@@ -109,28 +151,25 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 					}
 					break;
 				case NOTHING:
-					printf("Nothing happens\n");
 					break;
 				case MUSIC:
-					music = actor->play();
+					music = dynamic_cast<Bard*>(actor)->play();
 					if(enemy)
 						music = music * -1;
 					break;
 			}
-			
 			actor = NULL;
 		}
 		//-----------------------------------------------------------------
-		
 		//Victory or defeat check --------------------
+		defeat = true;
+		victory = true;
 		for(int i=0;i<n_characters;i++) {
-			defeat = true;
 			if(characters[i]->is_alive()) {
 				defeat = false;
 			}
 		}
 		for(int i=0;i<n_monsters;i++) {
-			victory = true;
 			if(monsters[i]->is_alive()) {
 				victory = false;
 			}
@@ -144,6 +183,8 @@ char* simulate(Entity* *characters, int n_characters, Entity* *monsters, int n_m
 	int c_value = (3*c_actual_value*100)/c_start_value;
 	int m_value = (m_actual_value*100)/m_start_value;
 	
+	printf("PV PERSI = %d su %d, PV INFLITTI = %d su %d\n",c_actual_value,c_start_value,m_actual_value,m_start_value);
+	printf("C_VALUE = %d, M_VALUE = %d, TURNI = %d\n",c_value,m_value,turns);
 	sprintf(balance_values,"%d,%d,%d",c_value,m_value,turns);
 
 	return strdup(balance_values);

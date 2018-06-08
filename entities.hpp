@@ -13,6 +13,21 @@ There are 3 types of entities: characters (represented by classes), monsters and
 
 #define DEATH_VALUE -10
 
+//Classes constants
+#define BARBARIAN 0
+#define BARD 1
+#define CLERIC 2
+#define DRUID 3
+#define SORCERER 4
+#define WIZARD 5
+#define MONK 6
+#define FIGHTER 7
+#define RANGER 8
+#define ROGUE 9
+#define PALADIN 10
+#define ANIMAL 11
+#define MONSTER 12
+
 //Tabs constants
 #define BARD_SPELLSLOTS	"tabs/bard_spellslots.csv"		//Tab for bard spellslots
 #define CLERIC_SPELLSLOTS "tabs/cleric_spellslots.csv"	//Tab for cleric spellslots
@@ -62,7 +77,6 @@ protected:char* name;	//Name of the entity
 	Attack* attacks[MAX_ATTACKS];	//Attacks used by the entity
 	Item* items[MAX_ITEMS];		//Items carried by the entity
 public:	Entity(char*);		//Receives serialized entity string
-	~Entity();
 	char* get_name();	//Receives name of entity
 	int get_stat(int);	//Receives parameter identifier
 	int get_ac();
@@ -97,6 +111,25 @@ public:	Entity(char*);		//Receives serialized entity string
 	int play();
 	int act();
 	/* ----------------------------------- */
+	virtual ~Entity() {
+		int i;
+		free(name);
+		for(i=0;i<MAX_ARMOR;i++) {	//Sets all armor objects to NULL
+			if(armors[i]!=NULL) {
+				free(armors[i]);
+			}
+		}
+		for(i=0;i<MAX_ATTACKS;i++) {	//Sets all attack objects to NULL
+			if(attacks[i]!=NULL) {
+				free(attacks[i]);
+			}
+		}
+		for(i=0;i<MAX_ITEMS;i++) {	//Sets all item objects to NULL
+			if(items[i]!=NULL) {
+				free(items[i]);
+			}
+		}
+	}
 };
 Entity::Entity(char* s) {
 	char** temp;
@@ -123,25 +156,6 @@ Entity::Entity(char* s) {
 	stats[REFL] = stats[REFL] + get_modifier(stats[DEX]);
 	stats[WILL] = stats[WILL] + get_modifier(stats[WIS]);
 	alive = true;
-}
-Entity::~Entity() {
-	int i;
-	free(name);
-	for(i=0;i<MAX_ARMOR;i++) {	//Sets all armor objects to NULL
-		if(armors[i]!=NULL) {
-			free(armors[i]);
-		}
-	}
-	for(i=0;i<MAX_ATTACKS;i++) {	//Sets all attack objects to NULL
-		if(attacks[i]!=NULL) {
-			free(attacks[i]);
-		}
-	}
-	for(i=0;i<MAX_ITEMS;i++) {	//Sets all item objects to NULL
-		if(items[i]!=NULL) {
-			free(items[i]);
-		}
-	}
 }
 char* Entity::get_name() {
 	return strdup(name);	//FREE
@@ -1046,7 +1060,7 @@ public:	Monster(char*);
 Monster::Monster(char* s) : Entity(s) {
 	char** temp;
 	split(s,',',&temp);
-	natural_ac = atoi(temp[13]);
+	natural_ac = atoi(temp[N_STATS]);
 }
 Monster::~Monster() {
 }

@@ -14,19 +14,20 @@ Library will be updated every time a new function for applying a rule will be ne
 #include <stdlib.h>
 
 //STATS constants
-#define N_STATS 12		//Number of stats serialized for a single entity
-#define LEVEL 0			//Level of the character OR challenge rating of the creature
-#define HP 1			//Hit points, the "life" of an entity
-#define STR 2			//Strength attribute
-#define DEX 3			//Dexterity attribute
-#define CON 4			//Constitution attribute
-#define INT 5			//Intelligence attribute
-#define WIS 6			//Wisdom attribute
-#define CHA 7			//Charisma attribute
-#define BAB 8			//Base attack bonus attribute
-#define FORT 9			//Base fortitude save attribute
-#define REFL 10			//Base reflexes save attribute
-#define WILL 11			//Base will save attribute
+#define N_STATS 13		//Number of stats serialized for a single entity
+#define CLASS 0
+#define LEVEL 1			//Level of the character OR challenge rating of the creature
+#define HP 2			//Hit points, the "life" of an entity
+#define STR 3			//Strength attribute
+#define DEX 4			//Dexterity attribute
+#define CON 5			//Constitution attribute
+#define INT 6			//Intelligence attribute
+#define WIS 7			//Wisdom attribute
+#define CHA 8			//Charisma attribute
+#define BAB 9			//Base attack bonus attribute
+#define FORT 10			//Base fortitude save attribute
+#define REFL 11			//Base reflexes save attribute
+#define WILL 12			//Base will save attribute
 //---------
 #define BASE_AC 10
 
