@@ -10,9 +10,6 @@ This library contains classes used to represent the elements in the game.
 
 //include
 #include "rules.hpp"		//Contains functions for applying rules
-#include "functions.h"		//Contains useful functions
-//#include <stdio.h> is already in "functions.h"
-//#include <string.h> is already in "functions.h"
 
 //MAX constants
 #define MAX_NAME 30		//Maximum length allowed for a name
@@ -21,10 +18,14 @@ This library contains classes used to represent the elements in the game.
 //Spells constants
 #define S_ARCANE 0		//Used to identify arcane spells
 #define S_CLERIC 1		//Used to identify cleric spells
-#define S_BARD 2			//Used to identify bard spells
+#define S_BARD 2		//Used to identify bard spells
 #define S_RANGER 3		//Used to identify ranger spells
 #define S_PALADIN 4		//Used to identify paladin spells
-#define S_DRUID 5			//Used to identify druid spells
+#define S_DRUID 5		//Used to identify druid spells
+
+//Throw describers
+#define ROLL_DESC "1d20"
+#define USES_DESC "1d10"
 
 //----------------------------------------------------------------------------------------------------------------------------------
 /*
@@ -82,7 +83,7 @@ Contains method to get attack results.
 */
 class Attack{
 private:char* name;		//Name of the attack
-	int damage;			//Damage of the attack
+	char* damage;			//Damage of the attack
 	int crit_value;			//Crit multiplier
 	int crit_range;			//Range for critical hits
 	int scaling;			//Stats which the weapon uses for scaling
@@ -97,7 +98,7 @@ Attack::Attack(char* s) {
 	char** temp;
 	split(s,',',&temp);
 	name = strdup(temp[0]);
-	damage = atoi(temp[1]);
+	damage = strdup(temp[1]);
 	crit_value = atoi(temp[2]);
 	crit_range = atoi(temp[3]);
 	scaling = atoi(temp[4]);
@@ -105,6 +106,7 @@ Attack::Attack(char* s) {
 }
 Attack::~Attack() {
 	free(name);
+	free(damage);
 }
 char* Attack::get_name() {
 	return strdup(name);
@@ -113,7 +115,7 @@ int Attack::get_scaling() {
 	return scaling;
 }
 void Attack::make_attack(int* attack_roll, int* damage_roll, int bab, int scale) {
-	int roll = throw_dice(D20);
+	int roll = throw_dice(ROLL_DESC);
 	int crit = 20 - crit_range;
 	if(roll>crit) {
 		*damage_roll = throw_dice(damage)*crit_value + scale;
@@ -124,7 +126,7 @@ void Attack::make_attack(int* attack_roll, int* damage_roll, int bab, int scale)
 }
 char* Attack::toString() {
 	char ret[MAX_BUFFER];
-	sprintf(ret,"%s,%d,%d,%d,%d",name,damage,crit_value,crit_range,scaling);
+	sprintf(ret,"%s,%s,%d,%d,%d",name,damage,crit_value,crit_range,scaling);
 	return strdup(ret);		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -136,14 +138,15 @@ For now, only damage or heal items are included.
 */
 class Item{
 private:char* name;	//Name of the item
-	int value;	//Numeric value of the item
+	char* value;	//Numeric value of the item
 	int uses;	//Number of uses for the item
 	int heal;	//FLAG: if true, the item is a healing item; if false, is a damage item
 public:	Item(char*);
 	~Item();
 	char* get_name();
-	int get_value();
+	char* get_value();
 	int get_uses();
+	void refull_uses();
 	bool is_heal();
 	bool use();		//Checks if the item still has uses; is yes, decreases uses by 1 and returns true; else, returns false
 	char* toString();
@@ -152,9 +155,9 @@ Item::Item(char* s) {
 	char** temp;
 	split(s,',',&temp);
 	name = strdup(temp[0]);
-	value = atoi(temp[1]);
+	value = strdup(temp[1]);
 	heal = atoi(temp[2]);		//Apparently subbing '0' to a character makes it an integer
-	uses = throw_dice(D10);
+	uses = throw_dice(USES_DESC);
 	free(temp);
 }
 Item::~Item() {
@@ -163,11 +166,14 @@ Item::~Item() {
 char* Item::get_name() {
 	return strdup(name);	//FREE
 }
-int Item::get_value() {
-	return value;
+char* Item::get_value() {
+	return strdup(value);
 }
 int Item::get_uses() {
 	return uses;
+}
+void Item::refull_uses() {
+	uses = throw_dice(USES_DESC);
 }
 bool Item::is_heal() {
 	return (heal>0);
@@ -181,7 +187,7 @@ bool Item::use() {
 }
 char* Item::toString() {
 	char ret[MAX_BUFFER];
-	sprintf(ret,"%s,%d,%d",name,value,heal);
+	sprintf(ret,"%s,%s,%d",name,value,heal);
 	return strdup(ret);		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -194,16 +200,16 @@ When using a spell, the spell gets sent to the enemy who calculates eventual dam
 class Spell{
 private:char* name;	//Name of the spell
 	int level;	//Level of the spell
-	int value;	//Dice used by the spell to determine the outcome value
+	char* value;	//Dice used by the spell to determine the outcome value
 	int save_type;	//Type of saving throw used to evade the spell
 	int heal;	//FLAG: Determines wether the spell is a healing or damaging one
 public:	Spell(char*);	//Receives a serialized spell string
 	~Spell();
 	char* get_name();
 	int get_level();
-	int get_value();
+	char* get_value();
 	int get_save_type();
-	bool is_heal();
+	int is_heal();
 	int get_dc(int);	//Receives spellcaster level
 	char* toString();
 };
@@ -212,28 +218,30 @@ Spell::Spell(char* s) {
 	split(s,',',&temp);
 	name = strdup(temp[0]);
 	level = atoi(temp[1]);
-	value = atoi(temp[2]);
+	value = strdup(temp[2]);
 	save_type = atoi(temp[3]);
 	heal = atoi(temp[4]);
 	free(temp);
 }
 Spell::~Spell() {
 	free(name);
+	free(value);
 }
 char* Spell::get_name() {
+
 	return strdup(name);	//FREE
 }
 int Spell::get_level() {
 	return level;
 }
-int Spell::get_value() {
-	return value;
+char* Spell::get_value() {
+	return strdup(value);
 }
 int Spell::get_save_type() {
 	return save_type;
 }
-bool Spell::is_heal() {
-	return (heal>0);
+int Spell::is_heal() {
+	return heal;
 }
 int Spell::get_dc(int caster_level) {
 	int ret;
@@ -242,7 +250,7 @@ int Spell::get_dc(int caster_level) {
 }
 char* Spell::toString() {
 	char ret[MAX_BUFFER];
-	sprintf(ret,"%s,%d,%d,%d,%d",name,level,value,save_type,heal);
+	sprintf(ret,"%s,%d,%s,%d,%d",name,level,value,save_type,heal);
 	return strdup(ret);		//FREE
 }
 //----------------------------------------------------------------------------------------------------------------------------------

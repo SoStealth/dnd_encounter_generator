@@ -14,6 +14,7 @@ This library contains functions that will be of use in the code.
 #include "split.h"
 
 int** get_table(char* filename, int rows, int columns);
+void expression(char* s, int* times, int* damage, int* bonus);
 
 /*
 Loads a table from a csv file and returns it
@@ -39,4 +40,50 @@ int** get_table(char* filename, int rows, int columns) {
 	}
 	fclose(file);	//closes file
 	return table;	//returns table
+}
+
+void expression(char* s, int* times, int* damage, int* bonus) {
+	char** temp;
+	int count = split(s,'d',&temp);
+	if(count == 1) {
+		*times = 0;
+		*damage = 0;
+		*bonus = atoi(temp[0]);
+		return;
+	}
+	if(strlen(temp[0])==0) {
+		*times = 1;
+	} else {
+		*times = atoi(temp[0]);
+	}
+	char** temp2;
+	char* s2 = strdup(temp[1]);
+	count = split(s2,'+',&temp2);
+	if(count==2) {
+		*damage = atoi(temp2[0]);
+		*bonus = atoi(temp2[1]);
+		return;
+	}
+	count = split(s2,'-',&temp2);
+	if(count==2) {
+		*damage = atoi(temp2[0]);
+		*bonus = atoi(temp2[1]);
+		*bonus = *bonus * -1;
+		return;
+	}
+	*damage = atoi(temp2[0]);
+	*bonus = 0;
+	free(s2);
+	return;
+}
+//-------------------------------------------------------------------------------------------
+void start_log(char* filepath) {
+	FILE* file = fopen(filepath,"w");
+	fclose(file);
+}
+//-------------------------------------------------------------------------------------------
+void write_log(char* filepath,char* s) {
+	FILE* file = fopen(filepath,"a");
+	fputs(s,file);
+	fclose(file);
 }

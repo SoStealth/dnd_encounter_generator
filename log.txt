@@ -1,0 +1,41 @@
+E' il turno di Lino Mendol
+Lino Mendol inizia a suonare (potenza della musica: 24)
+E' il turno di Sir Iano
+Sir Iano attacca Ghost infliggendo 0 danni
+E' il turno di Enrico Vasaio
+Enrico Vasaio attacca Ghost infliggendo 0 danni
+E' il turno di Ghost
+Ghost non può agire a causa della musica
+Ghost non agisce
+E' il turno di Padre Pio
+Padre Pio attacca Ghost infliggendo 4 danni
+E' il turno di Ghost
+Ghost attacca Padre Pio infliggendo 0 danni
+E' il turno di Ghost
+Ghost non può agire a causa della musica
+Ghost non agisce
+Fine del turno 1
+
+E' il turno di Ghost
+Ghost attacca Padre Pio infliggendo 5 danni
+E' il turno di Lino Mendol
+Lino Mendol attacca Ghost infliggendo 0 danni
+E' il turno di Ghost
+Ghost attacca Sir Iano infliggendo 0 danni
+E' il turno di Sir Iano
+Sir Iano attacca Ghost infliggendo 3 danni
+E' il turno di Ghost
+Ghost attacca Padre Pio infliggendo 0 danni
+E' il turno di Enrico Vasaio
+Enrico Vasaio attacca Ghost infliggendo 0 danni
+E' il turno di Padre Pio
+Padre Pio attacca Ghost infliggendo 8 danni
+Fine del turno 2
+
+E' il turno di Ghost
+Ghost attacca Enrico Vasaio infliggendo 6 danni
+E' il turno di Ghost
+Ghost attacca Lino Mendol infliggendo 4 danni
+E' il turno di Ghost
+Ghost attacca Sir Iano infliggendo 0 danni
+E' il turno di Lino Mendol

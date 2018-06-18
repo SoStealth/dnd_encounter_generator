@@ -71,6 +71,7 @@ int split (char *str, char c, char ***arr)
       }
       p++;
     }
+  *t = '\0';    //QUESTO L'HO AGGIUNTO IO
 
   return count;
 }

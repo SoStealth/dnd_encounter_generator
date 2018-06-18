@@ -11,7 +11,8 @@ There are 3 types of entities: characters (represented by classes), monsters and
 
 #include "equipments.hpp"
 
-#define DEATH_VALUE -10
+#define DEATH_VALUE 0
+#define BASE_AC 10
 
 //Classes constants
 #define BARBARIAN 0
@@ -62,6 +63,9 @@ There are 3 types of entities: characters (represented by classes), monsters and
 //In case someone needs to attack but hasn't got any attacks
 #define MELEE "Melee attack,4,0,0,2"
 
+//Describers
+#define FURTIVE_DESC "1d6"
+
 //------------------------------------------------------------------------------------------------------------------
 
 /*
@@ -79,8 +83,11 @@ protected:char* name;	//Name of the entity
 public:	Entity(char*);		//Receives serialized entity string
 	char* get_name();	//Receives name of entity
 	int get_stat(int);	//Receives parameter identifier
+	bool set_stat(int,int);
 	int get_ac();
 	int get_current_hp();
+	void refull_hp();
+	void reset();
 	bool is_alive();	//If current_hp > 0 true, else false
 	bool equip_armor(char*);	//True if armor gets equipped, false if there is no armor space
 	Armor* get_armor(int);	//Receives armor identifier
@@ -91,6 +98,7 @@ public:	Entity(char*);		//Receives serialized entity string
 	bool equip_item(char*);	//True if item gets equipped, false if there is no item space
 	Item* get_item(int);	//Receives item identifier
 	bool unequip_item(int);	//Receives item identifier, true if item has been unequipped, false if there is no item
+	void refull_items();
 	bool hit(int);		//Hits the entity and lowers his hp, return false if damage has been neglected
 	bool heal(int);		//Heals the entity by an amount, return false if heal has been neglected
 	/* Act methods: actions an entity can take */
@@ -167,6 +175,14 @@ int Entity::get_stat(int id) {
 		return NULL;
 	}
 }
+bool Entity::set_stat(int id, int value) {
+	if(id<N_STATS && value>0) {		//Checks if id is within range
+		stats[id] = value;
+		return true;
+	} else {
+		return false;
+	}
+}
 int Entity::get_ac() {
 	int ret;
 	ret = BASE_AC;
@@ -180,6 +196,18 @@ int Entity::get_ac() {
 }
 int Entity::get_current_hp() {
 	return current_hp;
+}
+void Entity::refull_hp() {
+	alive = true;
+	current_hp = stats[HP];
+}
+void Entity::reset() {
+	this->refull_hp();
+	for(int i=0;i<MAX_ITEMS;i++) {
+		if(items[i]!=NULL) {
+			items[i]->refull_uses();
+		}
+	}
 }
 bool Entity::is_alive() {
 	return alive;
@@ -280,6 +308,13 @@ bool Entity::unequip_item(int id) {
 	}
 	return false;
 }
+void Entity::refull_items() {
+	for(int i=0;i<MAX_ITEMS;i++) {	//Sets all item objects to NULL
+		if(items[i]!=NULL) {
+			items[i]->refull_uses();
+		}
+	}
+}
 /*
 hit method
 The current entity gets hit and loses 'value' number of hp
@@ -336,7 +371,7 @@ int Entity::attack(Entity* target) {
 bool Entity::heal_with_item() {
 	for(int i=0;i<MAX_ITEMS;i++) {
 		if(items[i]!=NULL && items[i]->is_heal() && items[i]->use()) {
-			heal(items[i]->get_value());
+			heal(throw_dice(items[i]->get_value()));
 			return true;
 		}
 	}
@@ -355,7 +390,7 @@ char* Entity::toString() {
 	stats[WILL] = stats[WILL] - get_modifier(stats[WIS]);
 	char ret[MAX_BUFFER];
 	sprintf(ret,"%s",name);
-	for(int i=0;i<N_STATS;i++) {		//Only base stats are serialized, because the rest can be calculated
+	for(int i=0;i<N_STATS;i++) {
 		sprintf(ret,"%s,%d",ret,stats[i]);
 	}
 	stats[FORT] = stats[FORT] + get_modifier(stats[CON]);
@@ -419,7 +454,7 @@ public:	Caster(char*);		//Receives serialized caster string
 	bool unequip_spell(int);	//Receives spell identifier, true if spell has been unequipped, false if there is no spell
 	bool can_cast();
 	/* Act methods */
-	int cast(Entity*,bool);	//Target, spell
+	int cast(Entity*,int);	//Target, spell
 	bool heal_with_spell();
 	char* toString();	//Serializator
 };
@@ -479,20 +514,26 @@ bool Caster::can_cast() {
 	}
 	return false;
 }
-int Caster::cast(Entity* target, bool heal) {
+int Caster::cast(Entity* target, int heal) {
 	Spell* spell = NULL;
-	for(int i=0;i<MAX_ATTACKS;i++) {
-		if(spells[i]!=NULL && heal==spells[i]->is_heal()) {
+	bool found = false;
+	for(int i=0;i<MAX_SPELLS && !found;i++) {
+		if(spells[i]!=NULL && heal==spells[i]->is_heal() && spell_uses[spells[i]->get_level()]>0) {
 			spell = new Spell(spells[i]->toString());
+			found = true;
 		}
 	}
-	if(spell == NULL) {
+	if(!found) {
 		return 0;
 	}
+	spell_uses[spell->get_level()]--;
 	int cd = spell->get_dc(stats[LEVEL]);
-	int save = throw_dice(D20) + target->get_stat(spell->get_save_type());
+	int save = throw_dice(ROLL_DESC) + target->get_stat(spell->get_save_type());
 	if(spell->is_heal()) {
-		target->heal(throw_dice(spell->get_value()));
+		char* s = spell->get_value();
+		int value = throw_dice(s);
+		target->heal(value);
+		free(s);
 		return 0;
 	}
 	if(save <= cd) {
@@ -504,13 +545,8 @@ int Caster::cast(Entity* target, bool heal) {
 }
 bool Caster::heal_with_spell() {
 	if(this->can_cast()) {
-		for(int i=0;i<MAX_SPELLS;i++) {
-			if(spells[i]!=NULL && spells[i]->is_heal() && spell_uses[spells[i]->get_level()]>0) {
-				spell_uses[spells[i]->get_level()]--;
-				cast(this,spells[i]);
-				return true;
-			}
-		}
+		cast(this,1);
+		return true;
 	}
 	return false;
 }
@@ -628,13 +664,13 @@ Bard::~Bard() {
 }
 int Bard::play() {	//Plays music and tries to stop creatures from moving
 	int ret;
-	ret = throw_dice(D20) + get_modifier(stats[CHA]) + entertain;
+	ret = throw_dice(ROLL_DESC) + get_modifier(stats[CHA]) + entertain;
 	if(ret<1) {
 		ret = 1;
 	}
 	return ret;
 }
-int Bard::act() {	//In case someone needs healing, the bard will authomatically try to heal him
+int Bard::act() {
 	int thrashold;
 	if(!is_alive()) {
 		return NOTHING;
@@ -654,7 +690,7 @@ int Bard::act() {	//In case someone needs healing, the bard will authomatically 
 	}
 }
 char* Bard::toString() {
-	return Entity::toString();
+	return Caster::toString();
 }
 //----------------------------------------------------------------------------------------------------------------------------------
 class Cleric : public Caster{
@@ -951,7 +987,7 @@ private:bool hidden;
 public:	Rogue(char*);
 	~Rogue();
 	int act();
-	bool attack(Entity*,Attack*);
+	bool attack(Entity*);
 	char* toString();
 };
 Rogue::Rogue(char* s) : Entity(s) {
@@ -961,7 +997,6 @@ Rogue::~Rogue() {
 }
 int Rogue::act() {
 	if(!is_alive()) {
-		printf("Dead");
 		return NOTHING;
 	}
 	int threshold = stats[HP]/2;
@@ -979,19 +1014,30 @@ int Rogue::act() {
 	}
 	return ATTACK;
 }
-bool Rogue::attack(Entity* target, Attack* attack) {
+bool Rogue::attack(Entity* target) {
 	int attack_roll;
 	int damage_roll;
-	if(hidden) {
-		stats[DEX] = stats[DEX] - 1000;
+	Attack* attack = NULL;
+	for(int i=0;i<MAX_ATTACKS;i++) {
+		if(attacks[i]!=NULL) {
+			attack = new Attack(attacks[i]->toString());
+		}
 	}
-	int scale = get_modifier(stats[attack->get_scaling()]);
+	if(attack == NULL) {
+		attack = new Attack(MELEE);
+	}
+	int scale;
+	if(attack->get_scaling()!=0) {
+		scale = get_modifier(stats[attack->get_scaling()]);
+	} else {
+		scale = 0;
+	}
 	attack->make_attack(&attack_roll,&damage_roll,stats[BAB],scale);
 	if(hidden) {
 		hidden = false;
 		int bonus_dices = (stats[LEVEL]-1)/2+1;
 		for(int k=0;k<bonus_dices;k++) {
-			damage_roll = damage_roll + throw_dice(D6);
+			damage_roll = damage_roll + throw_dice(FURTIVE_DESC);
 		}
 	}
 	int critical = attack_roll - stats[BAB] - scale;
@@ -999,9 +1045,9 @@ bool Rogue::attack(Entity* target, Attack* attack) {
 		if(damage_roll<1)
 			damage_roll = 1;
 		target->hit(damage_roll);
-		return true;
+		return damage_roll;
 	}
-	return false;
+	return 0;
 }
 char* Rogue::toString() {
 	return Entity::toString();
@@ -1051,26 +1097,35 @@ char* Paladin::toString() {
 //----------------------------------------------------------------------------------------------------------------------------------
 class Monster : public Entity{
 private:int natural_ac;
+		int cd;
 public:	Monster(char*);
 	~Monster();
-	bool set_stat(int,int);
+	int get_ac();
+	int get_cd();
 	int act();
 	char* toString();
 };
 Monster::Monster(char* s) : Entity(s) {
 	char** temp;
-	split(s,',',&temp);
-	natural_ac = atoi(temp[N_STATS]);
+	int count = split(s,',',&temp);
+	natural_ac = atoi(temp[NATURAL_AC+1]);
+	cd = atoi(temp[CD+1]);
 }
 Monster::~Monster() {
 }
-bool Monster::set_stat(int id, int value) {
-	if(id<N_STATS && value>0) {		//Checks if id is within range
-		stats[id] = value;
-		return true;
-	} else {
-		return false;
+int Monster::get_ac() {
+	int ret;
+	ret = BASE_AC;
+	for(int i=0;i<MAX_ARMOR;i++) {	//Deletes all armor objects
+		if(armors[i]!=NULL) {
+			ret = ret + armors[i]->get_ac_bonus();
+		}
 	}
+	ret = ret + get_modifier(stats[DEX]) + natural_ac;
+	return ret;
+}
+int Monster::get_cd() {
+	return cd;
 }
 int Monster::act() {
 	if(!is_alive()) {
@@ -1080,7 +1135,8 @@ int Monster::act() {
 }
 char* Monster::toString() {
 	char* ret;
-	sprintf(ret,"%s,%d",Entity::toString(),natural_ac);
+	char* s = Entity::toString();
+	sprintf(ret,"%s,%d,%d",Entity::toString(),natural_ac,cd);
 	return ret;
 }
 

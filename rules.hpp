@@ -12,10 +12,11 @@ Library will be updated every time a new function for applying a rule will be ne
 
 #include <time.h>
 #include <stdlib.h>
+#include "functions.h"
 
 //STATS constants
 #define N_STATS 13		//Number of stats serialized for a single entity
-#define CLASS 0
+#define CLASS 0			//Class of the entity
 #define LEVEL 1			//Level of the character OR challenge rating of the creature
 #define HP 2			//Hit points, the "life" of an entity
 #define STR 3			//Strength attribute
@@ -29,7 +30,9 @@ Library will be updated every time a new function for applying a rule will be ne
 #define REFL 11			//Base reflexes save attribute
 #define WILL 12			//Base will save attribute
 //---------
-#define BASE_AC 10
+#define N_STATS_MONSTER 15
+#define NATURAL_AC 13
+#define CD 14
 
 //Dice constants
 #define D100 100
@@ -41,15 +44,22 @@ Library will be updated every time a new function for applying a rule will be ne
 #define D4 4
 
 void init_random();		//Sets the seed for RNG
-int throw_dice(int);		//Receives number of dice faces
+int throw_dice(char*);		//Receives number of dice faces
 int get_modifier(int);		//Receives a stat and return modifier
 
 void init_random() {
 	srand(time(NULL));
 }
 
-int throw_dice(int faces) {
-	return rand()%faces+1;
+int throw_dice(char* describer) {
+	int times,damage,bonus,ret;
+	expression(describer,&times,&damage,&bonus);
+	if(damage==0) {
+		return bonus;
+	} else {
+		ret = (rand()%damage+1)*times+bonus;
+	}
+	return ret;
 }
 
 int get_modifier(int value) {

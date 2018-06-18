@@ -2,50 +2,75 @@
 #include "sqlite3.h"
 #include <string.h>
 
-#define SELECT "SELECT * FROM "
-#define WHERE " WHERE "
-#define MONSTERS "Monsters"
-#define ANIMALS "Animals"
-#define CHARACTERS "Characters"
+#ifndef __ENTITIES
+#define __ENTITIES
+#include "entities.hpp"
+#endif
 
-class Demon{
-private:sqlite3* db_monsters;
-	sqlite3* db_animals;
-	sqlite3* db_characters;
-public:	Demon();
-	~Demon();
-	char* get_monster_from_id();
-	char* get_animal_from_id();
-	char* get_character_from_id();
-	char* get_monster_from_cd();
-	char* get_character_from_name();
-	bool insert_monster();
-	bool insert_animal();
-	bool insert_character();
+#define MONSTERS_DB "databases/monsters"
+#define ANIMALS_DB "databases/animals"
+#define CHARACTERS_DB "databases/characters"
+
+#define CALLBACK_BUFFER 10500
+
+//--------------------------------------------------------------------------------------
+int callback(void* s, int count, char** data, char** columns) {
+	char* candidates = (char*)s;
+	char record[MAX_BUFFER];
+	sprintf(record,"%s",data[0]);
+	for(int i=1;i<count;i++) {
+		sprintf(record,"%s,%s",record,data[i]);
+	}
+	if(strlen(candidates)==0) {
+		sprintf(candidates,"%s",record);
+	} else {
+		sprintf(candidates,"%s;%s",candidates,record);	
+	}
+	return 0;
 }
-Demon::Demon() {
-	int ret;
-	ret = sqlite3_open("monsters.sqlite",&db_monsters);
-	if(ret) {
-		printf("Errore nell'apertura del database monsters.sqlite\n");
-		return -1;
+//---------------------------------------------------------------------------------------
+char* get_random_monster_from_cd(int* id,int cd) {	//restituisce l'ID del mostro trovato
+	sqlite3* db_monsters;
+	sqlite3_open(MONSTERS_DB,&db_monsters);
+	char query[MAX_BUFFER];
+	sprintf(query,"SELECT * FROM Monsters WHERE CD = %d\n",cd);
+	char candidates[CALLBACK_BUFFER];
+	char* error;
+	sqlite3_exec(db_monsters,query,callback,candidates,&error);
+	char** roaster;
+	int count = split(candidates,';',&roaster);
+	int chosen_one_id = rand()%count;
+	char** temp;
+	count = split(roaster[chosen_one_id],',',&temp);
+	char buffer[MAX_BUFFER];
+	sprintf(buffer,"%s",temp[1]);
+	for(int i=2;i<=N_STATS_MONSTER+1;i++) {
+		sprintf(buffer,"%s,%s",buffer,temp[i]);
 	}
-	ret = sqlite3_open("animals.sqlite",&db_animals);
-	if(ret) {
-		printf("Errore nell'apertura del database animals.sqlite\n");
-		return -2;
-	}
-	ret = sqlite3_open("characters.sqlite",&db_characters);
-	if(ret) {
-		printf("Errore nell'apertura del database characters.sqlite\n");
-		return -3;
-	}
-}
-Demon::~Demon() {
+	*id = atoi(temp[0]);
 	sqlite3_close(db_monsters);
-	sqlite3_close(db_animals);
-	sqlite3_close(db_characters); 
+	sprintf(candidates,"");
+	return strdup(buffer);
 }
-char* Demon::get_monster_from_id() {
-	
+char* get_attack_from_monster_id(int id) {	//L'ID serve per trovare gli attacchi del mostro
+	sqlite3* db_monsters;
+	sqlite3_open(MONSTERS_DB,&db_monsters);
+	char query[MAX_BUFFER];
+	sprintf(query,"SELECT * FROM Attacks WHERE ID = %d\n",id);
+	char attacks[CALLBACK_BUFFER];
+	char* error;
+	sqlite3_exec(db_monsters,query,callback,attacks,&error);
+	char** roaster;
+	int count = split(attacks,';',&roaster);
+	int chosen_one_id = rand()%count;
+	char** temp;
+	count = split(roaster[chosen_one_id],',',&temp);
+	char buffer[MAX_BUFFER];
+	sprintf(buffer,"%s",temp[1]);
+	for(int i=2;i<count;i++) {
+		sprintf(buffer,"%s,%s",buffer,temp[i]);
+	}
+	sqlite3_close(db_monsters);
+	sprintf(attacks,"");
+	return strdup(buffer);
 }
